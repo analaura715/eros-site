@@ -32,6 +32,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { enriquecerDadosEmpresa, buscarEmpresasPorNome } from "@/lib/gemini";
 import {
   Dialog,
@@ -137,6 +138,39 @@ export function EmpresaForm({ initialData, onSubmit, onCancel }: EmpresaFormProp
   const [isFetchingIA, setIsFetchingIA] = useState(false);
   const [empresasIA, setEmpresasIA] = useState<{nome: string, cidade: string, cnpj: string}[]>([]);
   const [isModalIAOpen, setIsModalIAOpen] = useState(false);
+
+  const [leads, setLeads] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchL = async () => {
+      const { data } = await supabase.from('leads').select('*').order('nome');
+      if (data) setLeads(data);
+    }
+    fetchL();
+  }, []);
+
+  const handleImportLead = (leadId: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+    
+    if (lead.cnpj) form.setValue("cnpj", lead.cnpj);
+    if (lead.nome) form.setValue("nome", lead.nome);
+    if (lead.nome_fantasia) form.setValue("nomeFantasia", lead.nome_fantasia);
+    if (lead.inscricao_estadual) form.setValue("inscricaoEstadual", lead.inscricao_estadual);
+    if (lead.segmento) form.setValue("segmento", lead.segmento);
+    if (lead.cep) form.setValue("cep", lead.cep);
+    if (lead.logradouro) form.setValue("logradouro", lead.logradouro);
+    if (lead.numero) form.setValue("numero", lead.numero);
+    if (lead.complemento) form.setValue("complemento", lead.complemento);
+    if (lead.bairro) form.setValue("bairro", lead.bairro);
+    if (lead.cidade) form.setValue("cidade", lead.cidade);
+    if (lead.uf) form.setValue("uf", lead.uf);
+    if (lead.telefone || lead.whatsapp) form.setValue("telefone", lead.telefone || lead.whatsapp);
+    if (lead.email) form.setValue("email", lead.email);
+    if (lead.regime_tributario) form.setValue("regimeTributario", lead.regime_tributario);
+    
+    toast.success("Dados do Lead importados com sucesso!");
+  };
 
   const form = useForm<EmpresaFormValues>({
     resolver: zodResolver(formSchema),
@@ -252,6 +286,22 @@ export function EmpresaForm({ initialData, onSubmit, onCancel }: EmpresaFormProp
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         
+        <div className="space-y-2 mb-4 bg-muted/30 p-4 rounded-lg border border-border">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Importar do Cadastro de Lead</h3>
+          <div className="grid grid-cols-1">
+             <Select onValueChange={handleImportLead}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Selecione um lead para puxar os dados gravados automaticamente..." />
+                </SelectTrigger>
+                <SelectContent>
+                   {leads.map(l => (
+                     <SelectItem key={l.id} value={l.id} className="text-xs">{l.nome} {l.cnpj ? `(${l.cnpj})` : ''}</SelectItem>
+                   ))}
+                </SelectContent>
+             </Select>
+          </div>
+        </div>
+
         <div className="space-y-2">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Dados Principais</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-x-3 gap-y-2">
