@@ -9,6 +9,7 @@ import { Plus, Trash2, Save, GripVertical, Edit2, X, RotateCcw } from "lucide-re
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ModulosCrud } from "./modulos-crud";
+import { BuilderProposta } from "./builder-proposta";
 export function OrcamentoConfig() {
   const [loading, setLoading] = useState(true);
   const [configId, setConfigId] = useState<string | null>(null);
@@ -256,9 +257,10 @@ export function OrcamentoConfig() {
 
   return (
     <Tabs defaultValue="motor" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-6">
+      <TabsList className="grid w-full grid-cols-3 max-w-[600px] mb-6">
         <TabsTrigger value="motor">Motor de Preços</TabsTrigger>
         <TabsTrigger value="textos">Textos da Proposta</TabsTrigger>
+        <TabsTrigger value="construtor">Construtor Visual</TabsTrigger>
       </TabsList>
 
       <TabsContent value="motor" className="space-y-6 pb-24">
@@ -628,6 +630,17 @@ export function OrcamentoConfig() {
 
           </CardContent>
         </Card>
+      </TabsContent>
+
+      <TabsContent value="construtor" className="pb-24">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-slate-800">Construtor Visual de Proposta</h2>
+          <p className="text-slate-500 text-sm mt-1">
+            Defina a ordem e o conteúdo de cada bloco do PDF. Arraste e solte para montar o modelo ideal.
+          </p>
+        </div>
+        
+        <BuilderProposta />
       </TabsContent>
     </Tabs>
   );
