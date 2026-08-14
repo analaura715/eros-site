@@ -44,7 +44,7 @@ export function AppSidebar() {
   const items = (isSupportModule ? suporteItems : comercialItems).filter(item => item.roles.includes(role));
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="print:hidden">
       <SidebarHeader>
         <div className="flex items-center gap-3 px-2 py-3">
           <VenuxLogo className="h-9 w-9 shrink-0 drop-shadow-sm" />

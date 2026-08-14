@@ -26,25 +26,38 @@ function DiagnosticoDetailComponent() {
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  const [desconto, setDesconto] = useState<number>(0);
+  const [descontoMensalidade, setDescontoMensalidade] = useState<number>(0);
+  const [descontoImplantacao, setDescontoImplantacao] = useState<number>(0);
+  const [setupOverride, setSetupOverride] = useState<number | ''>('');
   const [isManual, setIsManual] = useState(false);
   const [manualMensalidade, setManualMensalidade] = useState<number>(0);
   const [manualSetup, setManualSetup] = useState<number>(0);
+  const [manualPlanoNome, setManualPlanoNome] = useState('Plano Professional');
+  const [manualDescontoPersonalizado, setManualDescontoPersonalizado] = useState<number>(0);
+
+  const [valoresManuais, setValoresManuais] = useState<Record<string, number>>({});
+
+  const handleManualValueChange = (chave: string, valor: string) => {
+    setValoresManuais(prev => ({ ...prev, [chave]: Number(valor) }));
+  };
 
   const [motivoRecusa, setMotivoRecusa] = useState('');
   const [recusarOpen, setRecusarOpen] = useState(false);
   const [fecharOpen, setFecharOpen] = useState(false);
+  const [catalogoModulos, setCatalogoModulos] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [diagRes, configRes] = await Promise.all([
+      const [diagRes, configRes, modulosRes] = await Promise.all([
         supabase.from('diagnosticos').select('*').eq('id', id).maybeSingle(),
-        supabase.from('configuracoes_orcamento').select('*').limit(1).maybeSingle()
+        supabase.from('configuracoes_orcamento').select('*').limit(1).maybeSingle(),
+        supabase.from('catalogo_modulos').select('*')
       ]);
       
       if (diagRes.data) setDiagnostico(diagRes.data);
       if (configRes.data) setConfig(configRes.data);
+      if (modulosRes.data) setCatalogoModulos(modulosRes.data);
       setLoading(false);
     };
     fetchData();
@@ -54,49 +67,116 @@ function DiagnosticoDetailComponent() {
   if (!diagnostico) return <div className="p-8 text-center text-muted-foreground">Diagnóstico não encontrado.</div>;
 
   // CÁLCULO DINÂMICO DE ORÇAMENTO
-  const respostas = diagnostico.respostas_dinamicas || {};
-  const camposConfig = config?.formulario_builder || [];
+  const p = config?.formulario_builder?.parametros || {};
+  const respostas = diagnostico?.respostas_dinamicas || {};
+  const camposConfig = Array.isArray(config?.formulario_builder) ? config.formulario_builder : (config?.formulario_builder?.campos || []);
   
   let baseCalculo = config?.base_calculo || 0;
   let valorTotalSetup = config?.setup_padrao || 0;
   
   let acréscimosMensais: { motivo: string; valor: number }[] = [];
   
-  // Analisa as regras de cada pergunta e calcula o impacto no preço
-  camposConfig.forEach((campo: any) => {
-    const resposta = respostas[campo.id];
-    if (resposta === undefined || resposta === null || resposta === '') return;
+  // Pilares Fixo 2 e 3
+  if (p.implantacao_mensalidade > 0) acréscimosMensais.push({ motivo: 'Implantação (Mensalidade)', valor: p.implantacao_mensalidade });
+  if (p.suporte_mensalidade > 0) acréscimosMensais.push({ motivo: 'Suporte (Mensalidade)', valor: p.suporte_mensalidade });
+  valorTotalSetup += (p.implantacao_setup || 0) + (p.suporte_setup || 0);
 
-    if (campo.regra_tipo === 'soma_fixa') {
-      let valor = Number(campo.regra_valor) || 0;
-      if (valor > 0) {
-        acréscimosMensais.push({ motivo: campo.pergunta, valor });
-      }
-    } 
-    else if (campo.regra_tipo === 'multiplicador') {
-      let numeroResposta = Number(String(resposta).replace(/\D/g, '')) || 0;
-      let valorFator = Number(campo.regra_valor) || 0;
-      let resultado = numeroResposta * valorFator;
-      if (resultado > 0) {
-        acréscimosMensais.push({ motivo: `${campo.pergunta} (${numeroResposta} x R$ ${valorFator})`, valor: resultado });
-      }
-    }
-    else if (campo.regra_tipo === 'condicional_valor') {
-      if (String(resposta).trim().toLowerCase() === String(campo.regra_condicao).trim().toLowerCase()) {
-        let valor = Number(campo.regra_valor) || 0;
-        if (valor > 0) {
-          acréscimosMensais.push({ motivo: `${campo.pergunta} (${resposta})`, valor });
-        }
-      }
-    }
-  });
+  // Pilar 4: Regime Tributário
+  const regime = diagnostico.respostas_dinamicas?.regime_tributario;
+  if (regime === 'Simples Nacional') {
+    if (p.regime_simples_mensalidade > 0) acréscimosMensais.push({ motivo: 'Regime Tributário (Simples Nacional)', valor: p.regime_simples_mensalidade });
+    valorTotalSetup += p.regime_simples_setup || 0;
+  } else if (regime === 'Lucro Presumido') {
+    if (p.regime_presumido_mensalidade > 0) acréscimosMensais.push({ motivo: 'Regime Tributário (Lucro Presumido)', valor: p.regime_presumido_mensalidade });
+    valorTotalSetup += p.regime_presumido_setup || 0;
+  } else if (regime === 'Lucro Real') {
+    if (p.regime_real_mensalidade > 0) acréscimosMensais.push({ motivo: 'Regime Tributário (Lucro Real)', valor: p.regime_real_mensalidade });
+    valorTotalSetup += p.regime_real_setup || 0;
+  }
 
-  const totalAcrescimos = acréscimosMensais.reduce((acc, curr) => acc + curr.valor, 0);
-  const valorTotalMensal = baseCalculo + totalAcrescimos;
-  const valorFinalAutomatico = Math.max(0, valorTotalMensal - desconto);
+  // Pilar 4: Filiais (cobra apenas excedentes, mínimo 1)
+  let filiaisAdicionais = Math.max(0, (Number(diagnostico.qtd_cnpj) || 1) - 1);
+  if (filiaisAdicionais > 0) {
+    let valor = filiaisAdicionais * (p.filial_mensalidade || 0);
+    if (valor > 0) acréscimosMensais.push({ motivo: `Filiais Adicionais (${filiaisAdicionais}x)`, valor });
+    valorTotalSetup += filiaisAdicionais * (p.filial_setup || 0);
+  }
+
+  // Pilar 4: Notas Fiscais
+  let notas = Number(diagnostico.volume_mensal_notas) || 0;
+  let limiteNotas = p.notas_limite || 1000;
+  if (notas > limiteNotas) {
+    if (p.notas_mensalidade > 0) acréscimosMensais.push({ motivo: `Volume de Notas Fiscais (Acima de ${limiteNotas})`, valor: p.notas_mensalidade });
+    valorTotalSetup += p.notas_setup || 0;
+  }
+
+  // Pilar 4: Venda
+  const venda = diagnostico.venda_interna_externa;
+  if (venda === 'Apenas Interna (Dentro do Estado)') {
+    if (p.venda_interna_mensalidade > 0) acréscimosMensais.push({ motivo: 'Perfil de Venda (Apenas Interna)', valor: p.venda_interna_mensalidade });
+    valorTotalSetup += p.venda_interna_setup || 0;
+  } else if (venda === 'Apenas Externa' || venda === 'Fora do Estado') {
+    if (p.venda_externa_mensalidade > 0) acréscimosMensais.push({ motivo: 'Perfil de Venda (Apenas Externa)', valor: p.venda_externa_mensalidade });
+    valorTotalSetup += p.venda_externa_setup || 0;
+  } else if (venda === 'Ambas' || venda === 'Ambos') {
+    if (p.venda_ambas_mensalidade > 0) acréscimosMensais.push({ motivo: 'Perfil de Venda (Interna e Externa)', valor: p.venda_ambas_mensalidade });
+    valorTotalSetup += p.venda_ambas_setup || 0;
+  }
+
+  // Pilar 4: Mercado
+  const mercado = diagnostico.tipo_mercado;
+  if (mercado === 'Interno') {
+    if (p.mercado_interno_mensalidade > 0) acréscimosMensais.push({ motivo: 'Mercado de Atuação (Apenas Interno)', valor: p.mercado_interno_mensalidade });
+    valorTotalSetup += p.mercado_interno_setup || 0;
+  } else if (mercado === 'Exportação') {
+    if (p.mercado_exportacao_mensalidade > 0) acréscimosMensais.push({ motivo: 'Mercado de Atuação (Apenas Exportação)', valor: p.mercado_exportacao_mensalidade });
+    valorTotalSetup += p.mercado_exportacao_setup || 0;
+  } else if (mercado === 'Ambos' || mercado === 'Ambas') {
+    if (p.mercado_ambos_mensalidade > 0) acréscimosMensais.push({ motivo: 'Mercado de Atuação (Interno e Exportação)', valor: p.mercado_ambos_mensalidade });
+    valorTotalSetup += p.mercado_ambos_setup || 0;
+  }
+
+  // Pilar 4: Usuários Extras
+  let usuariosExtra = Number(diagnostico.qtd_usuarios_previstos) || 0;
+  if (usuariosExtra > 0) {
+    let valor = usuariosExtra * (p.usuario_mensalidade || 0);
+    if (valor > 0) acréscimosMensais.push({ motivo: `Usuários Adicionais (${usuariosExtra}x)`, valor });
+    valorTotalSetup += usuariosExtra * (p.usuario_setup || 0);
+  }
+
+  // Pilar 4: Importação
+  if (String(diagnostico.precisa_importar_dados).toLowerCase().includes('sim')) {
+    if (p.importacao_sim_mensalidade > 0) acréscimosMensais.push({ motivo: 'Importação de Dados (Sim)', valor: p.importacao_sim_mensalidade });
+    valorTotalSetup += p.importacao_sim_setup || 0;
+  } else {
+    if (p.importacao_nao_mensalidade > 0) acréscimosMensais.push({ motivo: 'Importação de Dados (Não)', valor: p.importacao_nao_mensalidade });
+    valorTotalSetup += p.importacao_nao_setup || 0;
+  }
+
+  // Pilar 5: Módulos
+  let modulosSelecionados = diagnostico.modulos_selecionados || [];
+  let modulos = catalogoModulos.filter(m => modulosSelecionados.includes(m.id));
+  let precoModulos = modulos.reduce((acc, curr) => acc + (curr.preco_mensalidade || 0), 0);
+  if (precoModulos > 0) acréscimosMensais.push({ motivo: `Módulos Adicionais (${modulos.length})`, valor: precoModulos });
+
+  valorTotalSetup += modulos.reduce((acc, curr) => acc + (curr.preco_setup || 0), 0);
+  
+  const setupAutomaticoFinal = Math.max(0, valorTotalSetup - descontoImplantacao);
+
+  // Aplica overrides manuais se existirem
+  const baseCalculoFinal = valoresManuais['baseCalculo'] !== undefined ? valoresManuais['baseCalculo'] : baseCalculo;
+  const acrescimosFinais = acréscimosMensais.map(a => ({
+    motivo: a.motivo,
+    valorOriginal: a.valor,
+    valorFinal: valoresManuais[a.motivo] !== undefined ? valoresManuais[a.motivo] : a.valor
+  }));
+
+  const totalAcrescimos = acrescimosFinais.reduce((acc, curr) => acc + curr.valorFinal, 0);
+  const valorTotalMensal = baseCalculoFinal + totalAcrescimos;
+  const valorFinalAutomatico = Math.max(0, valorTotalMensal - descontoMensalidade);
 
   const valorMensalidadeFinal = isManual ? manualMensalidade : valorFinalAutomatico;
-  const valorSetupFinal = isManual ? manualSetup : valorTotalSetup;
+  const valorSetupFinal = isManual ? manualSetup : setupAutomaticoFinal;
 
   const handleDelete = async () => {
     if (confirm("Tem certeza que deseja excluir?")) {
@@ -203,28 +283,55 @@ function DiagnosticoDetailComponent() {
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between items-center text-sm border-b border-indigo-100/50 pb-2">
                       <span className="text-slate-600">Base Calculada (Padrão)</span>
-                      <span className="font-bold text-slate-800">R$ {baseCalculo.toFixed(2)}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-slate-500 font-medium">R$</span>
+                        <Input 
+                          type="number"
+                          className="w-24 h-8 text-right font-bold text-slate-800"
+                          value={valoresManuais['baseCalculo'] !== undefined ? valoresManuais['baseCalculo'] : baseCalculo}
+                          onChange={(e) => handleManualValueChange('baseCalculo', e.target.value)}
+                        />
+                      </div>
                     </div>
                     
-                    {acréscimosMensais.map((acrescimo, idx) => (
+                    {acrescimosFinais.map((acrescimo, idx) => (
                       <div key={idx} className="flex justify-between items-center text-sm border-b border-indigo-100/50 pb-2">
                         <span className="text-slate-600">{acrescimo.motivo}</span>
-                        <span className="font-medium text-slate-800">+ R$ {acrescimo.valor.toFixed(2)}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-400 font-medium">+ R$</span>
+                          <Input 
+                            type="number"
+                            className="w-24 h-8 text-right font-medium text-slate-800"
+                            value={acrescimo.valorFinal}
+                            onChange={(e) => handleManualValueChange(acrescimo.motivo, e.target.value)}
+                          />
+                        </div>
                       </div>
                     ))}
 
-                    {acréscimosMensais.length === 0 && (
+                    {acrescimosFinais.length === 0 && (
                       <div className="text-sm text-slate-400 italic pb-2">Nenhum acréscimo dinâmico aplicado.</div>
                     )}
                   </div>
 
                   <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                     <div className="flex justify-between items-center mb-4">
-                      <Label className="text-slate-500">Desconto Especial (R$)</Label>
+                      <Label className="text-slate-500">Desconto Mensalidade (R$)</Label>
                       <Input 
                         type="number" 
-                        value={desconto || ''} 
-                        onChange={e => setDesconto(Number(e.target.value))}
+                        value={descontoMensalidade || ''} 
+                        onChange={e => setDescontoMensalidade(Number(e.target.value))}
+                        disabled={isManual}
+                        className="w-32 text-right font-bold text-indigo-700" 
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-100">
+                      <Label className="text-slate-500">Desconto Implantação (R$)</Label>
+                      <Input 
+                        type="number" 
+                        value={descontoImplantacao || ''} 
+                        onChange={e => setDescontoImplantacao(Number(e.target.value))}
                         disabled={isManual}
                         className="w-32 text-right font-bold text-indigo-700" 
                         placeholder="0.00"
@@ -252,19 +359,29 @@ function DiagnosticoDetailComponent() {
                       
                       <div className="bg-indigo-700/50 rounded-lg p-3">
                         <span className="text-indigo-200 text-xs uppercase block mb-1">Setup / Implantação (Único)</span>
-                        <span className="font-bold">R$ {valorTotalSetup.toFixed(2)}</span>
+                        <span className="font-bold">R$ {setupAutomaticoFinal.toFixed(2)}</span>
                       </div>
                     </div>
                   ) : (
                     <div className="flex flex-col space-y-4 flex-1 justify-center">
                       <Badge variant="secondary" className="bg-indigo-500 text-white w-fit mx-auto mb-2">Modo Manual</Badge>
                       <div className="space-y-1">
-                        <Label className="text-indigo-200 text-xs uppercase">Implantação (R$)</Label>
-                        <Input type="number" value={manualSetup || ''} onChange={e => setManualSetup(Number(e.target.value))} className="bg-white text-indigo-900 border-0 font-bold text-lg h-12" />
+                        <Label className="text-indigo-200 text-xs uppercase">Nome do Plano</Label>
+                        <Input type="text" value={manualPlanoNome} onChange={e => setManualPlanoNome(e.target.value)} className="bg-white text-indigo-900 border-0 font-bold h-10" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-indigo-200 text-xs uppercase">Mensalidade Base</Label>
+                          <Input type="number" value={manualMensalidade || ''} onChange={e => setManualMensalidade(Number(e.target.value))} className="bg-white text-indigo-900 border-0 font-bold h-10" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-indigo-200 text-xs uppercase">Desconto (R$)</Label>
+                          <Input type="number" value={manualDescontoPersonalizado || ''} onChange={e => setManualDescontoPersonalizado(Number(e.target.value))} className="bg-white text-indigo-900 border-0 font-bold h-10" />
+                        </div>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-indigo-200 text-xs uppercase">Mensalidade (R$)</Label>
-                        <Input type="number" value={manualMensalidade || ''} onChange={e => setManualMensalidade(Number(e.target.value))} className="bg-white text-indigo-900 border-0 font-bold text-xl h-14" />
+                          <Label className="text-indigo-200 text-xs uppercase">Implantação (R$)</Label>
+                          <Input type="number" value={manualSetup || ''} onChange={e => setManualSetup(Number(e.target.value))} className="bg-white text-indigo-900 border-0 font-bold h-10" />
                       </div>
                     </div>
                   )}
@@ -272,7 +389,15 @@ function DiagnosticoDetailComponent() {
                   <Link 
                     to="/proposta/$id" 
                     params={{ id: id }} 
-                    search={{ isManual: isManual ? 'true' : undefined, mensalidade: valorMensalidadeFinal, setup: valorSetupFinal }}
+                    search={{ 
+                      isManual: isManual ? 'true' : 'true', 
+                      mensalidade: isManual ? manualMensalidade : valorTotalMensal, 
+                      setup: isManual ? manualSetup : setupAutomaticoFinal,
+                      plano_nome: isManual ? manualPlanoNome : 'Plano Professional',
+                      plano_valor: isManual ? manualMensalidade : valorTotalMensal,
+                      desconto: isManual ? manualDescontoPersonalizado : descontoMensalidade,
+                      desconto_setup: isManual ? 0 : descontoImplantacao
+                    }}
                     className="mt-6"
                   >
                     <Button className="w-full bg-white text-indigo-700 hover:bg-indigo-50 shadow-sm font-bold h-12">
@@ -301,7 +426,60 @@ function DiagnosticoDetailComponent() {
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cidade</span>
                   <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border">{diagnostico.cidade_uf || 'Não informado'}</p>
                 </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Regime Tributário</span>
+                  <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border">{diagnostico.respostas_dinamicas?.regime_tributario || 'Não informado'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Qtd CNPJs</span>
+                  <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border">{diagnostico.qtd_cnpj || 'Não informado'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Volume Notas Fiscais</span>
+                  <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border">{diagnostico.volume_mensal_notas || 'Não informado'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Perfil de Venda</span>
+                  <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border">{diagnostico.venda_interna_externa || 'Não informado'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Mercado de Atuação</span>
+                  <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border">{diagnostico.tipo_mercado || 'Não informado'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Qtd Usuários</span>
+                  <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border">{diagnostico.qtd_usuarios_previstos || 'Não informado'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Importar Dados?</span>
+                  <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border">{diagnostico.precisa_importar_dados || 'Não'}</p>
+                </div>
+                <div className="space-y-2 lg:col-span-3">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Módulos Selecionados</span>
+                  <div className="bg-slate-50 p-3 rounded border flex flex-wrap gap-2">
+                    {(diagnostico.modulos_selecionados && diagnostico.modulos_selecionados.length > 0)
+                      ? catalogoModulos.filter(m => diagnostico.modulos_selecionados.includes(m.id)).map(m => (
+                          <span key={m.id} className="bg-white border border-slate-200 text-slate-700 text-[11px] uppercase tracking-wide px-2.5 py-1 rounded-md shadow-sm font-semibold">
+                            {m.nome}
+                          </span>
+                        ))
+                      : <span className="text-sm text-slate-500 font-medium">Nenhum módulo selecionado</span>}
+                  </div>
+                </div>
                 
+                {(respostas.qtd_embaladeiras || respostas.qtd_containers_semanal) && (
+                  <>
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Qtd Embaladeiras</span>
+                      <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border">{respostas.qtd_embaladeiras || 'Não informado'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Qtd Containers (Semana)</span>
+                      <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border">{respostas.qtd_containers_semanal || 'Não informado'}</p>
+                    </div>
+                  </>
+                )}
+
                 {camposConfig.map((campo: any) => (
                   <div key={campo.id} className="space-y-1">
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider line-clamp-1" title={campo.pergunta}>{campo.pergunta}</span>

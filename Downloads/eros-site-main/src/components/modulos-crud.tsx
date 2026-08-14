@@ -75,19 +75,18 @@ export function ModulosCrud() {
                 await supabase.from('catalogo_modulos').delete().eq('id', m.id);
               }
               const novosModulos = [
-                { nome: 'PESAGEM DA BALANÇA', categoria: 'Operacional', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'CLASSIFICAÇÃO DA FRUTA', categoria: 'Operacional', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'ENTRADA DE PRODUTOR', categoria: 'Operacional', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'EMISSÃO DE NOTA FISCAL', categoria: 'Operacional', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'EMISSÃO DE MDFE E CTE', categoria: 'Operacional', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'ETIQUETAS/EMBALADEIRAS', categoria: 'Operacional', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'GERAÇÃO DE BOLETO', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'CONTAS A PAGAR', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'CONTAS A RECEBER', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'FINANCEIRO GERAL', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'CONCILIAÇÃO BANCARIA', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'PAINEL DE RELATORIOS', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
-                { nome: 'IMPRESSÃO DE CHEQUES', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true }
+                { nome: 'FINANCEIRO GERAL ( CONTAS A PAGAR E RECEBER )', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'IMPRESSÃO DE CHEQUE', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'CONCILIAÇÃO BANCARIA POR API (OFX E REM)', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'GERAÇÃO DE BOLETO AUTOMATICO', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'PAINEL DE RELATORIO', categoria: 'Financeiro', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'BALANÇA RODOVIARIA INTEGRADA', categoria: 'Operacional', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'CLASSIFICAÇÃO DAS FRUTAS', categoria: 'Operacional', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'ENTRADA DO PRODUTOR', categoria: 'Operacional', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'EMISSÃO DE NF-E', categoria: 'Fiscal', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'EMISSÃO DE MDF-E', categoria: 'Fiscal', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'EMISSÃO DE CT-E', categoria: 'Fiscal', preco_setup: 0, preco_mensalidade: 25, ativo: true },
+                { nome: 'ETIQUETAS/EMBALADEIRAS', categoria: 'Operacional', preco_setup: 0, preco_mensalidade: 25, ativo: true }
               ];
               await supabase.from('catalogo_modulos').insert(novosModulos);
               fetchModulos();

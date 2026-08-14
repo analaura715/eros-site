@@ -17,7 +17,7 @@ export const Route = createFileRoute('/_comercial/configuracoes')({
   component: ConfiguracoesComponent,
 });
 
-type Tab = 'perfil' | 'seguranca' | 'preferencias' | 'notificacoes' | 'modulos';
+type Tab = 'perfil' | 'seguranca' | 'preferencias' | 'notificacoes' | 'precificacao';
 
 function ConfiguracoesComponent() {
   const { auth: user, updateProfile, theme: globalTheme, setTheme: setGlobalTheme } = useStore();
@@ -206,16 +206,6 @@ function ConfiguracoesComponent() {
                 {activeTab === 'notificacoes' && <ChevronRight className="h-4 w-4 opacity-50" />}
               </button>
               
-              <button
-                onClick={() => setActiveTab('modulos')}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${activeTab === 'modulos' ? 'bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <Briefcase className={`h-4 w-4 ${activeTab === 'modulos' ? 'text-primary' : ''}`} /> 
-                  Módulos do Sistema
-                </div>
-                {activeTab === 'modulos' && <ChevronRight className="h-4 w-4 opacity-50" />}
-              </button>
             </nav>
           </div>
 
@@ -559,12 +549,7 @@ function ConfiguracoesComponent() {
                 </>
               )}
 
-              {/* ABA: MÓDULOS */}
-              {activeTab === 'modulos' && (
-                <div className="bg-white dark:bg-card p-6 sm:p-8 rounded-2xl border shadow-sm">
-                  <ModulosCrud />
-                </div>
-              )}
+
             </div>
           </div>
         </div>

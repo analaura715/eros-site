@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calculator, ArrowRight, Building2, Package, Activity, FileText } from "lucide-react";
+import { Calculator, ArrowRight, Building2, Package, Activity, FileText, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute('/_comercial/orcamento-avulso')({
   component: OrcamentoAvulsoPage,
@@ -15,31 +16,102 @@ export const Route = createFileRoute('/_comercial/orcamento-avulso')({
 
 function OrcamentoAvulsoPage() {
   const [catalogoModulos, setCatalogoModulos] = useState<any[]>([]);
+  const [empresasSuggestions, setEmpresasSuggestions] = useState<string[]>([]);
+  const [descontoMensalidade, setDescontoMensalidade] = useState<number>(0);
+  const [descontoImplantacao, setDescontoImplantacao] = useState<number>(0);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [configParams, setConfigParams] = useState<any>({
+    base_calculo: 700,
+    setup_padrao: 0,
+    parametros: {}
+  });
 
   const [form, setForm] = useState({
     nome_empresa: '',
     qtd_cnpj: 1,
-    faturamento_medio_mensal: '',
-    gasto_mensal_compra_frutas: '',
+    regime_tributario: '',
     volume_mensal_notas: 0,
     venda_interna_externa: '',
-    qtd_bancos_boleto: 0,
     tipo_mercado: '',
-    possui_balanca_rodoviaria: 'Não',
-    qtd_usuarios_previstos: '',
+    qtd_usuarios_previstos: 0,
     precisa_importar_dados: 'Não',
-    modulos_selecionados: [] as string[]
+    modulos_selecionados: [] as string[],
+    override_plano_nome: 'Plano Professional',
+    override_mensalidade: '2.248,90',
+    override_desconto: '423,80',
+    override_setup: '650,00'
   });
 
   useEffect(() => {
-    const fetchModulos = async () => {
-      const { data } = await supabase.from('catalogo_modulos').select('*').eq('ativo', true).order('nome');
-      if (data) setCatalogoModulos(data);
+    const fetchDados = async () => {
+      const [modulosRes, empresasRes, leadsRes, configRes] = await Promise.all([
+        supabase.from('catalogo_modulos').select('*').eq('ativo', true).order('nome'),
+        supabase.from('empresas').select('nome, razao_social'),
+        supabase.from('leads').select('nome, razao_social, empresa'),
+        supabase.from('configuracoes_orcamento').select('*').limit(1).maybeSingle()
+      ]);
+
+      if (modulosRes.data) setCatalogoModulos(modulosRes.data);
+
+      if (configRes.data) {
+        setConfigParams({
+          base_calculo: configRes.data.base_calculo || 700,
+          setup_padrao: configRes.data.setup_padrao || 0,
+          parametros: configRes.data.formulario_builder?.parametros || {}
+        });
+      }
+
+      const nomes = new Set<string>();
+      empresasRes.data?.forEach((e: any) => {
+        if (e.nome) nomes.add(e.nome);
+        if (e.razao_social) nomes.add(e.razao_social);
+      });
+      leadsRes.data?.forEach((l: any) => {
+        if (l.nome) nomes.add(l.nome);
+        if (l.razao_social) nomes.add(l.razao_social);
+        if (l.empresa) nomes.add(l.empresa);
+      });
+      
+      setEmpresasSuggestions(Array.from(nomes).filter(Boolean).sort());
       setLoading(false);
     };
-    fetchModulos();
+    fetchDados();
   }, []);
+
+  // Magica do Autocomplete: Se o nome bater com um Lead/Empresa existente, puxar o Diagnóstico
+  useEffect(() => {
+    if (!form.nome_empresa) return;
+    
+    if (empresasSuggestions.includes(form.nome_empresa)) {
+      const matchDiag = async () => {
+        const { data } = await supabase
+          .from('diagnosticos')
+          .select('*')
+          .eq('razao_social', form.nome_empresa)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+          
+        if (data && data.respostas_dinamicas) {
+           const r = data.respostas_dinamicas;
+           setForm(prev => ({
+             ...prev,
+             qtd_cnpj: data.qtd_cnpj || prev.qtd_cnpj,
+             volume_mensal_notas: data.volume_mensal_notas || prev.volume_mensal_notas,
+             regime_tributario: r.regime_tributario || prev.regime_tributario,
+             venda_interna_externa: data.venda_interna_externa || prev.venda_interna_externa,
+             tipo_mercado: data.tipo_mercado || prev.tipo_mercado,
+             qtd_usuarios_previstos: data.qtd_usuarios_previstos || prev.qtd_usuarios_previstos,
+             precisa_importar_dados: data.precisa_importar_dados || prev.precisa_importar_dados,
+             modulos_selecionados: data.modulos_selecionados || prev.modulos_selecionados
+           }));
+           toast.success('Diagnóstico do Lead carregado automaticamente!');
+        }
+      };
+      matchDiag();
+    }
+  }, [form.nome_empresa, empresasSuggestions]);
 
   const handleChange = (field: string, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -67,19 +139,87 @@ function OrcamentoAvulsoPage() {
     });
   };
 
-  // Cálculos do Orçamento - Regras Oficiais
-  let baseCalculo = 700;
-  
-  let qtdCnpj = Number(form.qtd_cnpj) || 1;
-  let precoCnpj = qtdCnpj * 50;
+  const filteredSuggestions = form.nome_empresa 
+    ? empresasSuggestions.filter(s => s.toLowerCase().includes(form.nome_empresa.toLowerCase()))
+    : empresasSuggestions;
 
-  let volumeNotas = Number(form.volume_mensal_notas) || 0;
-  let precoNotas = Math.floor(volumeNotas / 10) * 10;
+  // Cálculos do Orçamento Integrado ao Motor!
+  const p = configParams.parametros;
+  let valorTotalMensal = configParams.base_calculo || 0;
+  let valorTotalSetup = configParams.setup_padrao || 0;
 
-  let precoVendaExterna = (form.venda_interna_externa === 'Fora do Estado' || form.venda_interna_externa === 'Ambos') ? 30 : 0;
+  // Pilares Fixo 2 e 3
+  valorTotalMensal += (p.implantacao_mensalidade || 0) + (p.suporte_mensalidade || 0);
+  valorTotalSetup += (p.implantacao_setup || 0) + (p.suporte_setup || 0);
 
-  let qtdBancos = Number(form.qtd_bancos_boleto) || 0;
-  let precoBoletos = qtdBancos * 70;
+  // Pilar 4: Regime Tributário
+  if (form.regime_tributario === 'Simples Nacional') {
+    valorTotalMensal += p.regime_simples_mensalidade || 0;
+    valorTotalSetup += p.regime_simples_setup || 0;
+  } else if (form.regime_tributario === 'Lucro Presumido') {
+    valorTotalMensal += p.regime_presumido_mensalidade || 0;
+    valorTotalSetup += p.regime_presumido_setup || 0;
+  } else if (form.regime_tributario === 'Lucro Real') {
+    valorTotalMensal += p.regime_real_mensalidade || 0;
+    valorTotalSetup += p.regime_real_setup || 0;
+  }
+
+  // Pilar 4: Filiais (cobra apenas excedentes, mínimo 1)
+  let filiaisAdicionais = Math.max(0, (Number(form.qtd_cnpj) || 1) - 1);
+  valorTotalMensal += filiaisAdicionais * (p.filial_mensalidade || 0);
+  valorTotalSetup += filiaisAdicionais * (p.filial_setup || 0);
+
+  // Pilar 4: Notas Fiscais
+  let notas = Number(form.volume_mensal_notas) || 0;
+  let limiteNotas = p.notas_limite || 1000;
+  if (notas > limiteNotas) {
+    valorTotalMensal += p.notas_mensalidade || 0;
+    valorTotalSetup += p.notas_setup || 0;
+  }
+
+  // Pilar 4: Venda
+  if (form.venda_interna_externa === 'Apenas Interna (Dentro do Estado)') {
+    valorTotalMensal += p.venda_interna_mensalidade || 0;
+    valorTotalSetup += p.venda_interna_setup || 0;
+  } else if (form.venda_interna_externa === 'Apenas Externa' || form.venda_interna_externa === 'Fora do Estado') {
+    valorTotalMensal += p.venda_externa_mensalidade || 0;
+    valorTotalSetup += p.venda_externa_setup || 0;
+  } else if (form.venda_interna_externa === 'Ambas' || form.venda_interna_externa === 'Ambos') {
+    valorTotalMensal += p.venda_ambas_mensalidade || 0;
+    valorTotalSetup += p.venda_ambas_setup || 0;
+  }
+
+  // Pilar 4: Mercado
+  if (form.tipo_mercado === 'Interno') {
+    valorTotalMensal += p.mercado_interno_mensalidade || 0;
+    valorTotalSetup += p.mercado_interno_setup || 0;
+  } else if (form.tipo_mercado === 'Exportação') {
+    valorTotalMensal += p.mercado_exportacao_mensalidade || 0;
+    valorTotalSetup += p.mercado_exportacao_setup || 0;
+  } else if (form.tipo_mercado === 'Ambos') {
+    valorTotalMensal += p.mercado_ambos_mensalidade || 0;
+    valorTotalSetup += p.mercado_ambos_setup || 0;
+  }
+
+  // Pilar 4: Usuários Extras
+  let usuariosExtra = Number(form.qtd_usuarios_previstos) || 0;
+  valorTotalMensal += usuariosExtra * (p.usuario_mensalidade || 0);
+  valorTotalSetup += usuariosExtra * (p.usuario_setup || 0);
+
+  // Pilar 4: Importação
+  if (form.precisa_importar_dados === 'Sim') {
+    valorTotalMensal += p.importacao_sim_mensalidade || 0;
+    valorTotalSetup += p.importacao_sim_setup || 0;
+  } else {
+    valorTotalMensal += p.importacao_nao_mensalidade || 0;
+    valorTotalSetup += p.importacao_nao_setup || 0;
+  }
+
+  // Pilar 5: Módulos
+  let selecionadosIds = form.modulos_selecionados;
+  let modulos = catalogoModulos.filter(m => selecionadosIds.includes(m.id));
+  valorTotalMensal += modulos.reduce((acc, curr) => acc + (curr.preco_mensalidade || 25), 0);
+  valorTotalSetup += modulos.reduce((acc, curr) => acc + (curr.preco_setup || 0), 0);
 
   const parseCurrencyStr = (val: string | number) => {
     if (!val) return 0;
@@ -90,33 +230,22 @@ function OrcamentoAvulsoPage() {
     return parseFloat(s.replace(/[^\d.-]/g, '')) || 0;
   };
 
-  let faturamento = parseCurrencyStr(form.faturamento_medio_mensal);
-  let precoFaturamento = Math.floor(faturamento / 30000) * 5;
-
-  let precoBalanca = form.possui_balanca_rodoviaria === 'Sim' ? 250 : 0;
-
-  let qtdUsuarios = Number(String(form.qtd_usuarios_previstos).replace(/\D/g, '')) || 0;
-  let precoUsuarios = qtdUsuarios * 25;
-
-  let precoImportacao = form.precisa_importar_dados === 'Sim' ? 150 : 0;
-
-  let gastoFrutas = parseCurrencyStr(form.gasto_mensal_compra_frutas);
-  let precoFrutas = Math.floor(gastoFrutas / 10000) * 5;
-
-  let precoExportacao = (form.tipo_mercado === 'Exportação' || form.tipo_mercado === 'Ambos') ? 200 : 0;
-
-  let selecionadosIds = form.modulos_selecionados;
-  let modulos = catalogoModulos.filter(m => selecionadosIds.includes(m.id));
-  
-  let precoModulos = modulos.length * 25;
-  let setupModulos = modulos.reduce((acc, curr) => acc + (curr.preco_setup || 0), 0);
-
-  let valorTotalMensal = baseCalculo + precoCnpj + precoNotas + precoVendaExterna + precoBoletos + precoFaturamento + precoUsuarios + precoFrutas + precoExportacao + precoModulos;
-  let valorTotalSetup = precoBalanca + precoImportacao + setupModulos;
-
   const handleGerarDocumento = () => {
     const nome = form.nome_empresa || 'Empresa Não Informada';
-    window.location.href = `/proposta/avulso?isManual=true&nome=${encodeURIComponent(nome)}&setup=${valorTotalSetup}&mensalidade=${valorTotalMensal}`;
+    const pNome = form.override_plano_nome;
+    const pMens = parseCurrencyStr(form.override_mensalidade);
+    const pDesc = parseCurrencyStr(form.override_desconto);
+    const pSet = parseCurrencyStr(form.override_setup);
+    
+    let url = `/proposta/avulso?isManual=true&nome=${encodeURIComponent(nome)}`;
+    
+    if (pMens > 0) {
+      url += `&plano_nome=${encodeURIComponent(pNome)}&plano_valor=${pMens}&desconto=${pDesc}&setup=${pSet}`;
+    } else {
+      url += `&setup=${valorTotalSetup}&mensalidade=${valorTotalMensal}&desconto=${descontoMensalidade}&desconto_setup=${descontoImplantacao}`;
+    }
+
+    window.location.href = url;
   };
 
   if (loading) return <div className="p-8">Carregando formulário...</div>;
@@ -127,12 +256,17 @@ function OrcamentoAvulsoPage() {
         
         {/* Lado Esquerdo: Formulário */}
         <div className="flex-1 space-y-6 max-w-4xl">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              <Calculator className="w-6 h-6 text-indigo-600" />
-              Calculadora de Orçamento Avulso
-            </h1>
-            <p className="text-slate-500 mt-1">Preencha as métricas operacionais para gerar uma proposta na hora.</p>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon" onClick={() => window.history.back()} className="h-10 w-10 shrink-0 rounded-full bg-white shadow-sm hover:bg-slate-100">
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                <Calculator className="w-6 h-6 text-indigo-600" />
+                Calculadora de Orçamento Inteligente
+              </h1>
+              <p className="text-slate-500 mt-1">Simule o orçamento dinâmico integrado ao Motor de Precificação e aos Diagnósticos.</p>
+            </div>
           </div>
 
           <Card className="border shadow-sm">
@@ -142,13 +276,39 @@ function OrcamentoAvulsoPage() {
               </h2>
             </div>
             <CardContent className="p-6">
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label className="font-semibold text-slate-700">Nome da Empresa (Para a proposta)</Label>
-                <Input 
-                  value={form.nome_empresa} 
-                  onChange={e => handleChange('nome_empresa', e.target.value)} 
-                  placeholder="Ex: Frutas Brasil Ltda" 
-                />
+                <div className="relative">
+                  <Input 
+                    value={form.nome_empresa} 
+                    onChange={e => {
+                      handleChange('nome_empresa', e.target.value);
+                      setShowSuggestions(true);
+                    }} 
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    placeholder="Busque ou digite o nome do Lead... (se existir, os dados serão preenchidos)" 
+                  />
+                  {showSuggestions && filteredSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                      {filteredSuggestions.map((nome, idx) => (
+                        <div 
+                          key={idx} 
+                          className="px-4 py-2 hover:bg-slate-100 cursor-pointer text-sm text-slate-700"
+                          onClick={() => {
+                            handleChange('nome_empresa', nome);
+                            setShowSuggestions(false);
+                          }}
+                        >
+                          {nome}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Selecione um lead da lista para carregar as respostas do diagnóstico automaticamente.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -156,21 +316,24 @@ function OrcamentoAvulsoPage() {
           <Card className="border shadow-sm">
             <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100">
               <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-indigo-500" /> Volumetria Operacional
+                <Activity className="w-5 h-5 text-indigo-500" /> Parâmetros da Empresa (Pilar 4)
               </h2>
             </div>
             <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label>Quantidade de CNPJs:</Label>
+                <Label>Regime Tributário:</Label>
+                <Select value={form.regime_tributario} onValueChange={v => handleChange('regime_tributario', v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Simples Nacional">Simples Nacional</SelectItem>
+                    <SelectItem value="Lucro Presumido">Lucro Presumido</SelectItem>
+                    <SelectItem value="Lucro Real">Lucro Real</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Quantidade de Filiais/CNPJs:</Label>
                 <Input type="number" min="1" value={form.qtd_cnpj} onChange={e => handleChange('qtd_cnpj', Number(e.target.value))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Faturamento médio mensal (R$):</Label>
-                <Input type="text" value={form.faturamento_medio_mensal} onChange={e => handleCurrencyChange('faturamento_medio_mensal', e.target.value)} placeholder="0,00" />
-              </div>
-              <div className="space-y-2">
-                <Label>Gasto mensal em frutas (R$):</Label>
-                <Input type="text" value={form.gasto_mensal_compra_frutas} onChange={e => handleCurrencyChange('gasto_mensal_compra_frutas', e.target.value)} placeholder="0,00" />
               </div>
               <div className="space-y-2">
                 <Label>Volume Mensal de Notas Fiscais:</Label>
@@ -181,15 +344,11 @@ function OrcamentoAvulsoPage() {
                 <Select value={form.venda_interna_externa} onValueChange={v => handleChange('venda_interna_externa', v)}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Dentro do Estado">Apenas dentro do Estado (Interna)</SelectItem>
-                    <SelectItem value="Fora do Estado">Fora do Estado (Externa)</SelectItem>
-                    <SelectItem value="Ambos">Ambos (Dentro e Fora)</SelectItem>
+                    <SelectItem value="Apenas Interna">Apenas Interna (Dentro do estado)</SelectItem>
+                    <SelectItem value="Apenas Externa">Apenas Externa (Fora do estado)</SelectItem>
+                    <SelectItem value="Ambas">Ambas (Interna e Externa)</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Qtd Bancos p/ Boleto:</Label>
-                <Input type="number" min="0" value={form.qtd_bancos_boleto} onChange={e => handleChange('qtd_bancos_boleto', Number(e.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label>Mercado de Atuação:</Label>
@@ -203,26 +362,16 @@ function OrcamentoAvulsoPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Qtd de Usuários (Pessoas):</Label>
-                <Input type="number" min="0" value={form.qtd_usuarios_previstos} onChange={e => handleChange('qtd_usuarios_previstos', e.target.value)} />
+                <Label>Usuários Adicionais (Além dos gestores):</Label>
+                <Input type="number" min="0" value={form.qtd_usuarios_previstos} onChange={e => handleChange('qtd_usuarios_previstos', Number(e.target.value))} />
               </div>
               <div className="space-y-2">
-                <Label>Possui Balança Rodoviária?</Label>
-                <Select value={form.possui_balanca_rodoviaria} onValueChange={v => handleChange('possui_balanca_rodoviaria', v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Sim">Sim</SelectItem>
-                    <SelectItem value="Não">Não</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Precisa Importar Dados?</Label>
+                <Label>Precisa Importar Dados de Outro Sistema ou Planilha?</Label>
                 <Select value={form.precisa_importar_dados} onValueChange={v => handleChange('precisa_importar_dados', v)}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Sim">Sim</SelectItem>
-                    <SelectItem value="Não">Não</SelectItem>
+                    <SelectItem value="Sim">Sim, precisa importar</SelectItem>
+                    <SelectItem value="Não">Não, base limpa</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -232,7 +381,7 @@ function OrcamentoAvulsoPage() {
           <Card className="border shadow-sm">
             <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Package className="w-5 h-5 text-teal-500" /> Módulos
+                <Package className="w-5 h-5 text-teal-500" /> Módulos (Pilar 5)
               </h2>
               <div className="space-x-2">
                 <Button variant="outline" size="sm" onClick={() => setForm(f => ({...f, modulos_selecionados: catalogoModulos.map(m=>m.id)}))}>Todos</Button>
@@ -276,6 +425,60 @@ function OrcamentoAvulsoPage() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="border shadow-sm bg-indigo-50/50">
+            <div className="bg-indigo-100/50 px-6 py-4 border-b border-indigo-100">
+              <h2 className="text-lg font-bold text-indigo-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-500" /> Sobrescrita Manual (Opcional)
+              </h2>
+            </div>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label className="font-semibold text-slate-700">Nome do Plano</Label>
+                  <Input 
+                    value={form.override_plano_nome} 
+                    onChange={e => handleChange('override_plano_nome', e.target.value)} 
+                    placeholder="Ex: Plano Professional" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-semibold text-slate-700">Mensalidade (Base)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">R$</span>
+                    <Input 
+                      className="pl-9"
+                      value={form.override_mensalidade} 
+                      onChange={e => handleCurrencyChange('override_mensalidade', e.target.value)} 
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-semibold text-slate-700">Desconto Aplicado</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">R$</span>
+                    <Input 
+                      className="pl-9"
+                      value={form.override_desconto} 
+                      onChange={e => handleCurrencyChange('override_desconto', e.target.value)} 
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-semibold text-slate-700">Taxa de Implantação</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">R$</span>
+                    <Input 
+                      className="pl-9"
+                      value={form.override_setup} 
+                      onChange={e => handleCurrencyChange('override_setup', e.target.value)} 
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
         </div>
 
         {/* Lado Direito: Preview do Orçamento */}
@@ -288,7 +491,7 @@ function OrcamentoAvulsoPage() {
                 </h2>
                 
                 <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/20 mb-4">
-                  <span className="text-indigo-100 text-xs font-medium uppercase tracking-wider block mb-1">Mensalidade</span>
+                  <span className="text-indigo-100 text-xs font-medium uppercase tracking-wider block mb-1">Mensalidade (Total)</span>
                   <div className="text-3xl font-extrabold flex items-baseline">
                     <span className="text-lg font-medium mr-1 text-indigo-200">R$</span>
                     {valorTotalMensal.toFixed(2)}
@@ -296,7 +499,7 @@ function OrcamentoAvulsoPage() {
                 </div>
 
                 <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/20">
-                  <span className="text-indigo-100 text-xs font-medium uppercase tracking-wider block mb-1">Setup / Implantação (Taxa Única)</span>
+                  <span className="text-indigo-100 text-xs font-medium uppercase tracking-wider block mb-1">Setup / Implantação (Único)</span>
                   <div className="text-2xl font-bold flex items-baseline">
                     {valorTotalSetup > 0 ? (
                       <>
@@ -310,7 +513,47 @@ function OrcamentoAvulsoPage() {
                 </div>
               </div>
               
-              <CardContent className="p-6 bg-slate-50">
+              <CardContent className="p-6 bg-slate-50 space-y-4">
+                
+                <div className="space-y-4 mb-4">
+                  <div className="space-y-1">
+                    <Label className="text-slate-700 font-semibold text-sm">Desconto Mensalidade (R$)</Label>
+                    <Input 
+                      type="number" 
+                      min="0"
+                      value={descontoMensalidade || ''} 
+                      onChange={e => setDescontoMensalidade(Number(e.target.value))} 
+                      className="bg-white"
+                      placeholder="Ex: 100.00"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-slate-700 font-semibold text-sm">Desconto Implantação (R$)</Label>
+                    <Input 
+                      type="number" 
+                      min="0"
+                      value={descontoImplantacao || ''} 
+                      onChange={e => setDescontoImplantacao(Number(e.target.value))} 
+                      className="bg-white"
+                      placeholder="Ex: 500.00"
+                    />
+                  </div>
+                </div>
+
+                {(descontoMensalidade > 0 || descontoImplantacao > 0) && (
+                  <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 space-y-3 mb-6">
+                    <h3 className="font-bold text-indigo-900 text-sm">Valores Finais com Desconto:</h3>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-600">Mensalidade Final:</span>
+                      <span className="font-bold text-indigo-700">R$ {Math.max(0, valorTotalMensal - descontoMensalidade).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-600">Implantação Final:</span>
+                      <span className="font-bold text-indigo-700">R$ {Math.max(0, valorTotalSetup - descontoImplantacao).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+
                 <Button 
                   size="lg" 
                   className="w-full h-14 text-base font-bold bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20"
@@ -320,7 +563,7 @@ function OrcamentoAvulsoPage() {
                   Gerar Documento A4
                 </Button>
                 <p className="text-center text-xs text-slate-500 mt-4">
-                  Os valores acima já aplicam automaticamente todas as regras de precificação vigentes.
+                  Os valores acima aplicam automaticamente a configuração salva no <b>Motor de Precificação</b>.
                 </p>
               </CardContent>
             </Card>

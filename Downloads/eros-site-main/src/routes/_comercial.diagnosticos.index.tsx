@@ -262,9 +262,16 @@ function DiagnosticosPage() {
                       <TableCell className="text-right py-3">
                         <div className="flex items-center justify-end gap-2">
                           {diag.status === 'respondido' ? (
-                            <Link to="/diagnosticos/$id" params={{ id: diag.id }}>
-                              <Button variant="outline" size="sm" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">Abrir Orçamento</Button>
-                            </Link>
+                            <>
+                              <Link to="/diagnosticos/$id" params={{ id: diag.id }}>
+                                <Button variant="outline" size="sm" className="text-indigo-600 border-indigo-200 hover:bg-indigo-50">Abrir Orçamento</Button>
+                              </Link>
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={`/questionario/${diag.id}?view=true`} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="w-4 h-4 mr-2" /> Visualizar
+                                </a>
+                              </Button>
+                            </>
                           ) : (
                             <>
                               <Button variant="outline" size="sm" asChild>
