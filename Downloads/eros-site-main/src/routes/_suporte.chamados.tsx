@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ function ActiveTimer({ startTime }: { startTime: string }) {
 import { useStore } from "@/lib/store";
 
 function ChamadosPage() {
+  const navigate = useNavigate();
   const { auth } = useStore();
   const { 
     fetchChamados, 
@@ -211,11 +212,12 @@ function ChamadosPage() {
     try {
       await updateChamado(ticket.id, { status: "Cancelado" });
       toast.success("Chamado cancelado com sucesso.");
+      setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, status: 'Cancelado' } : t));
       setOpenNewTicket(false);
       clearActiveTicket();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Erro ao cancelar o chamado.");
+      toast.error("Erro ao cancelar o chamado: " + (err.message || JSON.stringify(err)));
     }
   };
 
@@ -229,9 +231,9 @@ function ChamadosPage() {
       if (ticket.status === 'Em Andamento') {
         clearActiveTicket();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Erro ao excluir o chamado.");
+      toast.error("Erro ao excluir o chamado: " + (err.message || JSON.stringify(err)));
     }
   };
 
@@ -377,18 +379,16 @@ function ChamadosPage() {
                       </PopoverContent>
                     </Popover>
                     
-                    <Dialog open={openNewCompany} onOpenChange={setOpenNewCompany}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="icon" type="button" title="Cadastrar nova empresa" className="shrink-0"><Plus className="w-4 h-4" /></Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader><DialogTitle>Nova Empresa Rápida</DialogTitle></DialogHeader>
-                        <div className="space-y-4 pt-4">
-                          <div className="space-y-2"><Label>Nome da Empresa</Label><Input value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} placeholder="Ex: Acme Corp..." /></div>
-                          <Button className="w-full" type="button" onClick={handleCreateCompany}>Salvar e Selecionar</Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      type="button" 
+                      title="Ir para Cadastro de Clientes" 
+                      className="shrink-0"
+                      onClick={() => navigate({ to: '/suporte/clientes' })}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
 
