@@ -21,7 +21,7 @@ export const Route = createFileRoute('/_comercial/configuracoes')({
 
 type Tab = 'perfil' | 'seguranca' | 'preferencias' | 'notificacoes' | 'precificacao' | 'usuarios';
 
-export function ConfiguracoesComponent() {
+function ConfiguracoesComponent() {
   const { auth: user, updateProfile, theme: globalTheme, setTheme: setGlobalTheme } = useStore();
   const searchParams = new URLSearchParams(window.location.search);
   const initialTab = (searchParams.get('tab') as Tab) || 'perfil';
