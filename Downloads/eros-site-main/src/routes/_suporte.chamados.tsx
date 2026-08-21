@@ -205,6 +205,19 @@ function ChamadosPage() {
       toast.error("Erro ao iniciar chamado.");
     }
   };
+  
+  const handleCancelTicket = async (ticket: Ticket) => {
+    if (!window.confirm("Deseja realmente cancelar este chamado?")) return;
+    try {
+      await updateChamado(ticket.id, { status: "Cancelado" });
+      toast.success("Chamado cancelado com sucesso.");
+      setOpenNewTicket(false);
+      clearActiveTicket();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao cancelar o chamado.");
+    }
+  };
 
   const handleFinalize = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -793,24 +806,40 @@ function ChamadosPage() {
                     
                     {/* Ações */}
                     <TableCell className="text-right align-top py-4">
-                      {ticket.status === 'Em Andamento' ? (
-                        <Button 
-                          variant="destructive" 
-                          size="sm" 
-                          className="h-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setTicketToFinalize(ticket);
-                            setOpenFinalize(true);
-                          }}
-                        >
-                          Finalizar
-                        </Button>
-                      ) : (
-                        <Button variant="ghost" size="sm" className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10">
-                          Detalhes
-                        </Button>
-                      )}
+                      <div className="flex justify-end gap-2">
+                        {(ticket.status === 'Aberto' || ticket.status === 'Em Andamento') && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 border-red-200 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelTicket(ticket);
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                        )}
+
+                        {ticket.status === 'Em Andamento' ? (
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            className="h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTicketToFinalize(ticket);
+                              setOpenFinalize(true);
+                            }}
+                          >
+                            Finalizar
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10">
+                            Detalhes
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
 
                   </TableRow>
