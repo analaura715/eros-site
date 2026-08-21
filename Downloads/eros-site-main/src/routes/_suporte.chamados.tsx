@@ -385,7 +385,7 @@ function ChamadosPage() {
                       type="button" 
                       title="Ir para Cadastro de Clientes" 
                       className="shrink-0"
-                      onClick={() => navigate({ to: '/suporte/clientes' })}
+                      onClick={() => navigate({ to: '/clientes' })}
                     >
                       <Plus className="w-4 h-4" />
                     </Button>
