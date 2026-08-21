@@ -62,7 +62,7 @@ export default {
       // Content-Security-Policy (CSP) - Ajuste as URLs permitidas conforme necessário
       securityHeaders.set(
         'Content-Security-Policy', 
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;"
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:;"
       );
 
       return new Response(response.body, {

@@ -165,9 +165,11 @@ function ChamadosPage() {
     });
   }, [tickets, search, filterClient, filterModule, filterPeriod]);
 
-  const handleStartTicket = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newClient || !newAssignee) {
+  const handleStartTicket = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const finalAssignee = newAssignee || auth?.name;
+    
+    if (!newClient || !finalAssignee) {
       toast.error("Preencha Empresa e Responsável");
       return;
     }
@@ -178,7 +180,7 @@ function ChamadosPage() {
         empresa_id: newClient,
         contato_nome: newContact || undefined,
         tipo: suporteConfig?.tipos_ticket?.[0]?.nome || "Dúvida de Uso",
-        responsavel: newAssignee,
+        responsavel: finalAssignee,
         status: "Em Andamento",
         data_inicio: format(new Date(), 'yyyy-MM-dd'),
         hora_inicio: format(new Date(), 'HH:mm'),
@@ -190,7 +192,7 @@ function ChamadosPage() {
         empresa_id: newClient,
         empresa_nome: emp?.nome || "",
         contato: newContact,
-        responsavel: newAssignee,
+        responsavel: finalAssignee,
         start_time: Date.now()
       });
       
@@ -412,7 +414,7 @@ function ChamadosPage() {
                                     type="button"
                                     size="sm" 
                                     variant="outline" 
-                                    title="Conectar AnyDesk"
+                                    title="Criar Chamado e Abrir AnyDesk"
                                     className="h-8 text-xs bg-white text-red-600 hover:bg-red-50 border-red-200 dark:bg-slate-900" 
                                     onClick={() => {
                                       if (func.senha_anydesk && navigator.clipboard) {
@@ -421,6 +423,7 @@ function ChamadosPage() {
                                           toast.success("Senha do AnyDesk copiada para área de transferência!");
                                         } catch (e) {}
                                       }
+                                      handleStartTicket();
                                       window.location.href = `anydesk:${func.id_anydesk.replace(/\s/g, '')}`;
                                     }}
                                   >
@@ -441,7 +444,7 @@ function ChamadosPage() {
                                     type="button"
                                     size="sm" 
                                     variant="outline" 
-                                    title="Conectar RustDesk"
+                                    title="Criar Chamado e Abrir RustDesk"
                                     className="h-8 text-xs bg-white text-blue-600 hover:bg-blue-50 border-blue-200 dark:bg-slate-900" 
                                     onClick={() => {
                                       if (func.senha_rustdesk && navigator.clipboard) {
@@ -450,6 +453,7 @@ function ChamadosPage() {
                                           toast.success("Senha do RustDesk copiada para área de transferência!");
                                         } catch (e) {}
                                       }
+                                      handleStartTicket();
                                       window.location.href = `rustdesk://connect?id=${func.id_rustdesk.replace(/\s/g, '')}`;
                                     }}
                                   >
