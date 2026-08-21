@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ export const Route = createFileRoute('/_comercial/orcamento-avulso')({
 });
 
 function OrcamentoAvulsoPage() {
+  const navigate = useNavigate();
   const [catalogoModulos, setCatalogoModulos] = useState<any[]>([]);
   const [empresasSuggestions, setEmpresasSuggestions] = useState<string[]>([]);
   const [descontoMensalidade, setDescontoMensalidade] = useState<number>(0);
@@ -216,7 +217,7 @@ function OrcamentoAvulsoPage() {
   }
 
   // Pilar 5: Módulos
-  let selecionadosIds = form.modulos_selecionados;
+  let selecionadosIds = Array.isArray(form.modulos_selecionados) ? form.modulos_selecionados : [];
   let modulos = catalogoModulos.filter(m => selecionadosIds.includes(m.id));
   valorTotalMensal += modulos.reduce((acc, curr) => acc + (curr.preco_mensalidade || 25), 0);
   valorTotalSetup += modulos.reduce((acc, curr) => acc + (curr.preco_setup || 0), 0);
@@ -245,7 +246,7 @@ function OrcamentoAvulsoPage() {
       url += `&setup=${valorTotalSetup}&mensalidade=${valorTotalMensal}&desconto=${descontoMensalidade}&desconto_setup=${descontoImplantacao}`;
     }
 
-    window.location.href = url;
+    navigate({ to: url });
   };
 
   if (loading) return <div className="p-8">Carregando formulário...</div>;

@@ -31,11 +31,18 @@ export const Route = createFileRoute("/_comercial/convites")({
 /* ── Apenas 2 níveis de acesso ─────────────────────────────────────── */
 const NIVEIS_ACESSO = [
   { value: "Padrão",         label: "Usuário Padrão" },
+  { value: "Suporte",        label: "Usuário de Suporte" },
+  { value: "Comercial",      label: "Usuário Comercial" },
+  { value: "Financeiro",     label: "Usuário Financeiro" },
   { value: "Administrador",  label: "Usuário Administrador" },
 ];
 
 function labelNivel(cargo: string) {
-  return cargo === "Administrador" ? "Usuário Administrador" : "Usuário Padrão";
+  if (cargo === "Administrador") return "Usuário Administrador";
+  if (cargo === "Suporte") return "Usuário de Suporte";
+  if (cargo === "Comercial") return "Usuário Comercial";
+  if (cargo === "Financeiro") return "Usuário Financeiro";
+  return "Usuário Padrão";
 }
 
 /* ── Tipos internos ─────────────────────────────────────────────────── */

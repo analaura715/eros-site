@@ -11,8 +11,8 @@ import { Loader2, Mail, Lock, CheckCircle2, User, KeyRound, ArrowRight, Eye, Eye
 export const Route = createFileRoute("/register")({
   head: () => ({ 
     meta: [
-      { title: "Criar Conta | Venux CRM" }, 
-      { name: "description", content: "Crie sua conta no Venux CRM." }
+      { title: "Criar Conta | Venux Plataforma de Gestão" }, 
+      { name: "description", content: "Crie sua conta no Venux." }
     ] 
   }),
   component: RegisterPage,
@@ -121,17 +121,17 @@ function RegisterPage() {
           <VenuxLogo className="h-20 w-20 shrink-0 drop-shadow-[0_0_35px_rgba(0,181,226,0.6)]" />
           <div className="flex flex-col leading-none">
             <span className="text-6xl font-extrabold tracking-tight text-white drop-shadow-md">venux</span>
-            <span className="text-xs uppercase tracking-[0.4em] text-[#00E676] font-extrabold mt-1.5 ml-0.5">CRM PLATFORM</span>
+            <span className="text-xs uppercase tracking-[0.4em] text-[#00E676] font-extrabold mt-1.5 ml-0.5">PLATAFORMA DE GESTÃO</span>
           </div>
         </div>
         
         {/* Conteúdo Central */}
         <div className="relative z-10 max-w-[500px] my-auto py-8">
           <h1 className="text-[44px] font-extrabold mb-6 leading-[1.12] text-white tracking-tight drop-shadow-sm">
-            Junte-se à equipe de vendas do futuro.
+            Eleve a gestão de todo o seu negócio.
           </h1>
           <p className="text-white/80 text-[18px] leading-relaxed mb-10 font-normal">
-            Sua chave de acesso concede entrada imediata à plataforma. Configure sua conta em segundos e tenha o CRM mais inteligente do mercado em suas mãos.
+            Sua chave de acesso concede entrada imediata à plataforma. Configure sua conta em segundos e tenha a plataforma de gestão mais inteligente do mercado em suas mãos.
           </p>
           
           <div className="space-y-4">
@@ -160,9 +160,9 @@ function RegisterPage() {
 
         {/* Footer lateral */}
         <div className="relative z-10 text-xs text-white/50 flex gap-6 pt-4 border-t border-white/10">
-          <span>&copy; {new Date().getFullYear()} Venux CRM</span>
-          <a href="#" className="hover:text-white transition-colors">Termos de Uso</a>
-          <a href="#" className="hover:text-white transition-colors">Privacidade</a>
+          <span>&copy; {new Date().getFullYear()} Venux</span>
+          <Link to="/termos" className="hover:text-white transition-colors">Termos de Uso</Link>
+          <Link to="/privacidade" className="hover:text-white transition-colors">Privacidade</Link>
         </div>
       </div>
 

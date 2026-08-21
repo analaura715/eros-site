@@ -12,16 +12,18 @@ export const Route = createFileRoute("/_comercial")({
 
 // Matriz global de quem pode acessar qual rota principal
 const rolesMatrix: Record<string, string[]> = {
-  "/dashboard": ["Administrador", "Comercial", "Financeiro", "Suporte", "Padrão", "Vendedor", "Usuário"],
-  "/empresas": ["Administrador", "Comercial", "Financeiro", "Suporte", "Padrão", "Vendedor", "Usuário"],
+  "/dashboard": ["Administrador", "Comercial", "Financeiro", "Padrão", "Vendedor", "Usuário"],
+  "/empresas": ["Administrador", "Comercial", "Financeiro", "Padrão", "Vendedor", "Usuário"],
   "/leads": ["Administrador", "Comercial", "Vendedor", "Usuário"],
   "/diagnosticos": ["Administrador", "Comercial", "Vendedor"],
   "/pipeline": ["Administrador", "Comercial", "Padrão", "Vendedor", "Usuário"],
-  "/agenda": ["Administrador", "Comercial", "Suporte", "Padrão", "Vendedor", "Usuário"],
-  "/historico": ["Administrador", "Comercial", "Suporte", "Padrão", "Vendedor", "Usuário"],
+  "/agenda": ["Administrador", "Comercial", "Padrão", "Vendedor", "Usuário"],
+  "/historico": ["Administrador", "Comercial", "Padrão", "Vendedor", "Usuário"],
   "/relatorios": ["Administrador", "Financeiro"],
   "/convites": ["Administrador", "Desenvolvedor"],
   "/configuracoes": ["Administrador", "Desenvolvedor"],
+  "/usuarios-config": ["Administrador", "Desenvolvedor"],
+  "/usuarios": ["Administrador", "Desenvolvedor"],
 };
 
 function AppLayout() {

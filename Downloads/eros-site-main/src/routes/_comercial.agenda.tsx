@@ -27,7 +27,8 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-const DnDCalendar = withDragAndDrop(Calendar as any);
+const _withDragAndDrop = typeof withDragAndDrop === 'function' ? withDragAndDrop : (withDragAndDrop as any).default;
+const DnDCalendar = _withDragAndDrop ? _withDragAndDrop(Calendar as any) : Calendar;
 
 export const Route = createFileRoute('/_comercial/agenda')({
   component: AgendaComponent,

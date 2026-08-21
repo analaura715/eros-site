@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Search, Filter, Copy, FileText, CheckCircle2, Clock, ExternalLink, Calculator, Trash2, ChevronsUpDown, Check, Settings, LayoutDashboard } from "lucide-react";
+import { Plus, Search, Filter, Copy, FileText, CheckCircle2, Clock, ExternalLink, Calculator, Trash2, ChevronsUpDown, Check, Settings, LayoutDashboard, Receipt, FileSignature, ShoppingCart, Files } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -131,19 +131,22 @@ function DiagnosticosPage() {
       <div className="flex items-center justify-between p-6 pb-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Calculator className="w-6 h-6 text-primary" />
-            Central de Orçamentos
+            <Files className="w-6 h-6 text-primary" />
+            Documentos Comerciais
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Gerencie propostas, envie diagnósticos e configure as regras do motor de cálculo.</p>
+          <p className="text-sm text-muted-foreground mt-1">Gerencie diagnósticos, orçamentos, contratos, recibos e pedidos.</p>
         </div>
       </div>
 
       <div className="px-6 flex-1 overflow-y-auto">
         <Tabs defaultValue="diagnosticos" className="w-full h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-3 max-w-2xl mb-6">
-            <TabsTrigger value="diagnosticos" className="gap-2"><FileText className="w-4 h-4"/> Diagnósticos (Leads)</TabsTrigger>
-            <TabsTrigger value="avulso" className="gap-2"><Calculator className="w-4 h-4"/> Orçamento Avulso</TabsTrigger>
-            <TabsTrigger value="config" className="gap-2"><Settings className="w-4 h-4"/> Motor de Precificação</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6 max-w-5xl mb-6">
+            <TabsTrigger value="diagnosticos" className="gap-2"><FileText className="w-4 h-4"/> Diagnósticos</TabsTrigger>
+            <TabsTrigger value="avulso" className="gap-2"><Calculator className="w-4 h-4"/> Orçamentos</TabsTrigger>
+            <TabsTrigger value="contratos" className="gap-2"><FileSignature className="w-4 h-4"/> Contratos</TabsTrigger>
+            <TabsTrigger value="recibos" className="gap-2"><Receipt className="w-4 h-4"/> Recibos</TabsTrigger>
+            <TabsTrigger value="ordens" className="gap-2"><ShoppingCart className="w-4 h-4"/> Pedidos</TabsTrigger>
+            <TabsTrigger value="config" className="gap-2"><Settings className="w-4 h-4"/> Motor/Config</TabsTrigger>
           </TabsList>
 
           <TabsContent value="diagnosticos" className="space-y-4 flex-1">
@@ -295,7 +298,7 @@ function DiagnosticosPage() {
           <TabsContent value="avulso" className="h-full">
             <Card className="border-dashed border-2 bg-slate-50/50 p-12 text-center h-[500px] flex flex-col items-center justify-center">
               <Calculator className="w-16 h-16 text-slate-300 mb-4" />
-              <h3 className="text-xl font-bold text-slate-700 mb-2">Simulador de Orçamento Avulso</h3>
+              <h3 className="text-xl font-bold text-slate-700 mb-2">Simulador de Orçamentos</h3>
               <p className="text-slate-500 mb-6 max-w-md">Faça orçamentos rápidos sem precisar vincular a um Lead ou enviar um questionário.</p>
               <Link to="/orcamento-avulso">
                 <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700">
@@ -303,6 +306,42 @@ function DiagnosticosPage() {
                   Abrir Simulador em Tela Cheia
                 </Button>
               </Link>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="contratos" className="h-full">
+            <Card className="border-dashed border-2 bg-slate-50/50 p-12 text-center h-[500px] flex flex-col items-center justify-center">
+              <FileSignature className="w-16 h-16 text-slate-300 mb-4" />
+              <h3 className="text-xl font-bold text-slate-700 mb-2">Gerador de Contratos</h3>
+              <p className="text-slate-500 mb-6 max-w-md">Em breve! Esta área permitirá gerar contratos em PDF a partir dos dados do Lead ou Empresa.</p>
+              <Button disabled className="bg-slate-300">
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Contrato
+              </Button>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="recibos" className="h-full">
+            <Card className="border-dashed border-2 bg-slate-50/50 p-12 text-center h-[500px] flex flex-col items-center justify-center">
+              <Receipt className="w-16 h-16 text-slate-300 mb-4" />
+              <h3 className="text-xl font-bold text-slate-700 mb-2">Emissão de Recibos</h3>
+              <p className="text-slate-500 mb-6 max-w-md">Em breve! Gere recibos de pagamento ou sinal e envie diretamente para o cliente.</p>
+              <Button disabled className="bg-slate-300">
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Recibo
+              </Button>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ordens" className="h-full">
+            <Card className="border-dashed border-2 bg-slate-50/50 p-12 text-center h-[500px] flex flex-col items-center justify-center">
+              <ShoppingCart className="w-16 h-16 text-slate-300 mb-4" />
+              <h3 className="text-xl font-bold text-slate-700 mb-2">Ordens de Pedido</h3>
+              <p className="text-slate-500 mb-6 max-w-md">Em breve! Crie e acompanhe ordens de pedidos de venda fechados.</p>
+              <Button disabled className="bg-slate-300">
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Ordem de Pedido
+              </Button>
             </Card>
           </TabsContent>
 

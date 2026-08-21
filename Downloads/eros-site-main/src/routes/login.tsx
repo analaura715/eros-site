@@ -12,7 +12,7 @@ import { Loader2, Mail, Lock, CheckCircle2, ArrowRight, Eye, EyeOff } from "luci
 export const Route = createFileRoute("/login")({
   head: () => ({ 
     meta: [
-      { title: "Venux CRM | Plataforma Comercial Premium" }, 
+      { title: "Venux | Plataforma de Gestão" }, 
       { name: "description", content: "Acesse sua conta." }
     ] 
   }),
@@ -123,25 +123,25 @@ function LoginPage() {
           <VenuxLogo className="h-20 w-20 shrink-0 drop-shadow-[0_0_35px_rgba(0,181,226,0.6)]" />
           <div className="flex flex-col leading-none">
             <span className="text-6xl font-extrabold tracking-tight text-white drop-shadow-md">venux</span>
-            <span className="text-xs uppercase tracking-[0.4em] text-[#00E676] font-extrabold mt-1.5 ml-0.5">CRM PLATFORM</span>
+            <span className="text-xs uppercase tracking-[0.4em] text-[#00E676] font-extrabold mt-1.5 ml-0.5">PLATAFORMA DE GESTÃO</span>
           </div>
         </div>
         
         {/* Conteúdo Central */}
         <div className="relative z-10 max-w-[500px] my-auto py-8">
           <h1 className="text-[44px] font-extrabold mb-6 leading-[1.12] text-white tracking-tight drop-shadow-sm">
-            Gestão inteligente para acelerar suas vendas.
+            Gestão inteligente para todas as áreas da sua empresa.
           </h1>
           <p className="text-white/80 text-[18px] leading-relaxed mb-10 font-normal">
-            Tenha controle total do seu pipeline comercial, acompanhe oportunidades, organize clientes e feche mais negócios utilizando uma plataforma criada para equipes de alta performance.
+            Tenha o melhor do CRM comercial, gerencie processos internos, organize o setor financeiro e acompanhe rotinas de suporte e marketing em uma única plataforma criada para a máxima performance.
           </p>
           
           <div className="grid grid-cols-2 gap-4">
             {[
-              "CRM Completo",
-              "Automações Inteligentes",
-              "Gestão Comercial",
-              "Dashboard em Tempo Real"
+              "Gestão CRM (Comercial)",
+              "Processos Internos",
+              "Suporte & Marketing",
+              "Organização Financeira"
             ].map((feature, i) => (
               <div 
                 key={i} 
@@ -163,9 +163,9 @@ function LoginPage() {
 
         {/* Footer da lateral */}
         <div className="relative z-10 text-xs text-white/50 flex gap-6 pt-4 border-t border-white/10">
-          <span>&copy; {new Date().getFullYear()} Venux CRM</span>
-          <a href="#" className="hover:text-white transition-colors">Termos de Uso</a>
-          <a href="#" className="hover:text-white transition-colors">Privacidade</a>
+          <span>&copy; {new Date().getFullYear()} Venux</span>
+          <Link to="/termos" className="hover:text-white transition-colors">Termos de Uso</Link>
+          <Link to="/privacidade" className="hover:text-white transition-colors">Privacidade</Link>
         </div>
       </div>
 

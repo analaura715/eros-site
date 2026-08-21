@@ -88,6 +88,10 @@ function EmpresaDetailComponent() {
                 <span className="font-medium">{empresa.segmento || 'Não classificado'}</span>
               </div>
               <div className="grid gap-1">
+                <span className="text-muted-foreground text-xs uppercase tracking-wider">Setor de Atuação</span>
+                <span className="font-medium">{empresa.setor_atuacao || 'Não classificado'}</span>
+              </div>
+              <div className="grid gap-1">
                 <span className="text-muted-foreground text-xs uppercase tracking-wider">Regime Tributário</span>
                 <span className="font-medium">{empresa.regime_tributario || 'Sem Regime'}</span>
               </div>

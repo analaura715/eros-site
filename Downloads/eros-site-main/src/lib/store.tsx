@@ -65,7 +65,7 @@ const initialState = (): State => ({
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initialState);
   const [auth, setAuth] = useState<AuthUser | null>(null);
-  const [theme, setThemeState] = useState<"light" | "dark" | "system">("system");
+  const [theme, setThemeState] = useState<"light" | "dark" | "system">("light");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {

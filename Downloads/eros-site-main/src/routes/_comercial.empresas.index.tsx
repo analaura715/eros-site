@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Filter, Eye, Edit, Trash2, CalendarIcon, Building2, MapPin, Hash, Factory } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
@@ -66,20 +67,32 @@ function EmpresasComponent() {
     setEmpresaEditando({
       id: empresa.id,
       nome: empresa.nome,
-      segmento: empresa.segmento,
-      cidade: empresa.cidade.split(' - ')[0],
-      uf: empresa.cidade.split(' - ')[1] || 'SP',
-      dataInicioOperacao: empresa.data_inicio_operacao ? new Date(empresa.data_inicio_operacao) : undefined,
       cnpj: empresa.cnpj || '',
       nomeFantasia: empresa.nome_fantasia || empresa.nome,
+      inscricaoEstadual: empresa.inscricao_estadual || '',
+      cidade: empresa.cidade?.split(' - ')[0] || '',
+      uf: empresa.cidade?.split(' - ')[1] || 'SP',
       cep: empresa.cep || '',
       logradouro: empresa.logradouro || '',
       numero: empresa.numero || '',
+      complemento: empresa.complemento || '',
       bairro: empresa.bairro || '',
       telefone: empresa.telefone || '',
       email: empresa.email || '',
-      regimeTributario: empresa.regime_tributario || 'Sem Regime Tributário',
-      observacoes: empresa.observacoes || ''
+      emailContador: empresa.email_contador || '',
+      regimeTributario: empresa.regime_tributario || '',
+      certificadoAnexo: empresa.dados_fiscais?.certificado_anexo || '',
+      certificadoBase64: empresa.dados_fiscais?.certificado_base64 || '',
+      certificadoSenha: empresa.dados_fiscais?.certificado_senha || '',
+      certificadoVencimento: empresa.dados_fiscais?.certificado_vencimento ? new Date(empresa.dados_fiscais.certificado_vencimento) : undefined,
+      documentosFiscais: empresa.dados_fiscais?.documentos_fiscais || [],
+      funcionarios: empresa.funcionarios || [],
+      // Legacy
+      segmento: empresa.segmento,
+      dataInicioOperacao: empresa.data_inicio_operacao ? new Date(empresa.data_inicio_operacao) : undefined,
+      observacoes: empresa.observacoes || '',
+      status: empresa.status || 'Em Negociação',
+      citricolaTipo: empresa.citricola_tipo || ''
     });
     setIsSheetOpen(true);
   };
@@ -103,8 +116,6 @@ function EmpresasComponent() {
       nome: data.nome,
       nome_fantasia: data.nomeFantasia,
       inscricao_estadual: data.inscricaoEstadual,
-      data_inicio_operacao: data.dataInicioOperacao ? format(data.dataInicioOperacao, 'yyyy-MM-dd') : null,
-      segmento: data.segmento,
       cep: data.cep,
       logradouro: data.logradouro,
       numero: data.numero,
@@ -114,8 +125,23 @@ function EmpresasComponent() {
       uf: data.uf,
       telefone: data.telefone,
       email: data.email,
+      email_contador: data.emailContador,
       regime_tributario: data.regimeTributario,
-      observacoes: data.observacoes
+      dados_fiscais: {
+        certificado_anexo: data.certificadoAnexo,
+        certificado_base64: data.certificadoBase64,
+        certificado_senha: data.certificadoSenha,
+        certificado_vencimento: data.certificadoVencimento ? data.certificadoVencimento.toISOString() : null,
+        documentos_fiscais: data.documentosFiscais
+      },
+      funcionarios: data.funcionarios || [],
+      // Legacy
+      data_inicio_operacao: data.dataInicioOperacao ? format(data.dataInicioOperacao, 'yyyy-MM-dd') : null,
+      segmento: data.segmento,
+      observacoes: data.observacoes,
+      status: data.status,
+      setor_atuacao: data.setorAtuacao,
+      citricola_tipo: data.citricolaTipo
     };
 
     if (data.id) {
@@ -148,6 +174,16 @@ function EmpresasComponent() {
       case 'Produtor': return <Factory className="h-3.5 w-3.5" />;
       case 'Indústria': return <Building2 className="h-3.5 w-3.5" />;
       default: return <Hash className="h-3.5 w-3.5" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch(status) {
+      case 'Ativo': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      case 'Em Negociação': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'Prospectado': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'Inativo': return 'bg-gray-100 text-gray-500 border-gray-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
@@ -204,6 +240,7 @@ function EmpresasComponent() {
                 <TableRow className="border-b-border/50 hover:bg-transparent">
                   <TableHead className="w-[300px] pl-6 font-semibold text-foreground/80">Empresa</TableHead>
                   <TableHead className="font-semibold text-foreground/80">CNPJ</TableHead>
+                  <TableHead className="font-semibold text-foreground/80">Status</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Segmento</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Localização</TableHead>
                   <TableHead className="text-right pr-6 font-semibold text-foreground/80">Ações</TableHead>
@@ -226,6 +263,11 @@ function EmpresasComponent() {
                       <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-muted/50 border text-xs font-medium text-muted-foreground font-mono">
                         {emp.cnpj || '—'}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getStatusColor(emp.status || 'Em Negociação')}`}>
+                        {emp.status || 'Em Negociação'}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm text-foreground/70">
@@ -302,31 +344,25 @@ function EmpresasComponent() {
         </div>
       </div>
 
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-[100vw] sm:max-w-[800px] overflow-y-auto border-l-0 sm:border-l shadow-2xl">
-          <SheetHeader className="mb-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                {empresaEditando ? <Edit className="h-5 w-5 text-primary" /> : <Building2 className="h-5 w-5 text-primary" />}
-              </div>
-              <SheetTitle className="text-xl">{empresaEditando ? 'Editar Cadastro' : 'Novo Cadastro'}</SheetTitle>
-            </div>
-            <SheetDescription className="text-sm">
+      <Dialog open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <DialogContent className="sm:max-w-[800px] p-0 h-[85vh] flex flex-col gap-0 overflow-hidden">
+          <DialogHeader className="p-4 border-b bg-white dark:bg-slate-950 shrink-0">
+            <DialogTitle>{empresaEditando ? 'Editar Cadastro' : 'Novo Cadastro'}</DialogTitle>
+            <DialogDescription>
               {empresaEditando 
                 ? 'Atualize os dados desta empresa abaixo.' 
-                : 'Preencha os dados da nova empresa. Use o CNPJ para preenchimento automático.'}
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className="py-2">
+                : 'Preencha os dados da nova empresa.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
             <EmpresaForm 
               initialData={empresaEditando} 
               onSubmit={handleSubmitForm} 
               onCancel={() => setIsSheetOpen(false)}
             />
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

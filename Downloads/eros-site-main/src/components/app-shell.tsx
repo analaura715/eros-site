@@ -1,7 +1,9 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LogOut, Moon, Sun, Settings } from "lucide-react";
+import { LogOut, Moon, Sun, Settings, MessageSquare } from "lucide-react";
 import { ThemeSwitcher } from "./theme-switcher";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, useEffect, type ReactNode } from "react";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
 import { Button } from "@/components/ui/button";
@@ -59,6 +61,30 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [search, state]);
 
+  useEffect(() => {
+    if (!auth) return;
+    
+    const channel = supabase
+      .channel('public:tickets:appshell')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'tickets' },
+        (payload) => {
+          if (payload.new && payload.new.status === 'Em Andamento') {
+            toast.info(`Novo chamado iniciado!`, {
+              description: `O usuário ${payload.new.responsavel || 'Alguém'} iniciou um chamado para ${payload.new.empresa_nome || 'um cliente'}.`,
+              duration: 8000,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [auth]);
+
   const title =
     pathname.startsWith("/dashboard") ? "Dashboard" :
     pathname.startsWith("/empresas") ? "Empresas" :
@@ -70,6 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname.startsWith("/propostas") ? "Propostas" :
     pathname.startsWith("/relatorios") ? "Relatórios" :
     pathname.startsWith("/convites") ? "Acessos & Convites" :
+    pathname.startsWith("/usuarios") ? "Gestão de Usuários" :
     pathname.startsWith("/configuracoes") ? "Configurações" : "";
 
   return (
@@ -81,52 +108,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             <SidebarTrigger />
             <div className="hidden md:block text-sm font-semibold">{title}</div>
             <div className="ml-auto flex items-center gap-2">
-              <ThemeSwitcher />
-              
-              <Popover onOpenChange={(open) => { if (open) state.markNotificationsAsRead?.(); }}>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
-                    <Bell className="h-4 w-4" />
-                    {(state.notifications || []).some(n => !n.read) && (
-                      <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-background"></span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-80 p-0">
-                  <div className="flex items-center justify-between border-b px-4 py-3">
-                    <h3 className="font-semibold text-sm">Notificações</h3>
-                    <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-muted-foreground hover:text-primary" onClick={() => state.markNotificationsAsRead?.()}>
-                      Marcar como lidas
-                    </Button>
-                  </div>
-                  <ScrollArea className="h-[300px]">
-                    {(!state.notifications || state.notifications.length === 0) ? (
-                      <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
-                        <Bell className="h-8 w-8 mb-2 opacity-20" />
-                        <p className="text-sm">Nenhuma notificação nova</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col">
-                        {state.notifications.map((n) => (
-                          <div key={n.id} className={`flex flex-col gap-1 p-4 border-b last:border-0 transition-colors ${!n.read ? 'bg-primary/5' : 'hover:bg-muted/50'}`}>
-                            <p className="text-sm text-foreground">{n.message}</p>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(n.date), { addSuffix: true, locale: ptBR })}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </ScrollArea>
-                </PopoverContent>
-              </Popover>
-
+              <Button variant="ghost" size="icon" aria-label="Chat">
+                <MessageSquare className="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="icon" asChild>
                 <Link to="/configuracoes">
                   <Settings className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button size="icon" variant="ghost" onClick={toggleTheme} aria-label="Toggle theme">
+              <Button size="icon" variant="ghost" onClick={toggleTheme} aria-label="Alternar tema">
                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
               <DropdownMenu>
@@ -144,7 +134,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/configuracoes">Configurações</Link>
+                    <Link to="/configuracoes">Meu Perfil</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {

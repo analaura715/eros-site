@@ -285,6 +285,7 @@ export function LeadForm({ initialData, onSubmit, onCancel, onDelete }: LeadForm
                       <SelectItem value="Proposta enviada" className="text-xs text-green-600">Proposta enviada</SelectItem>
                       <SelectItem value="Sem interesse" className="text-xs text-red-600">Sem interesse</SelectItem>
                       <SelectItem value="Sem resposta" className="text-xs text-gray-500">Sem resposta</SelectItem>
+                      <SelectItem value="Arquivado" className="text-xs font-bold text-gray-400">Arquivado</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage className="text-[10px]" />

@@ -50,18 +50,21 @@ function DashboardComponent() {
       const hoje = new Date();
       const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString();
 
-      // 1. Clientes Novos (Empresas criadas este mês, indicando fechamento de negócio)
+      // 1. Clientes Novos (Empresas ativas criadas este mês, indicando fechamento de negócio)
       const { count: empresasCount } = await supabase
         .from('empresas')
         .select('*', { count: 'exact', head: true })
-        .gte('created_at', primeiroDiaMes);
+        .gte('created_at', primeiroDiaMes)
+        .eq('status', 'Ativo');
       
       setClientesNovos(empresasCount || 0);
 
       // 2. Buscar Leads para montar os KPIs e Funil
-      const { data: leads } = await supabase.from('leads').select('*');
+      const { data: leadsData } = await supabase.from('leads').select('*');
 
-      if (leads) {
+      if (leadsData) {
+        // Ignorar leads arquivados
+        const leads = leadsData.filter(l => l.status !== 'Arquivado');
         // P/ Contatar Hoje
         const paraHoje = leads.filter(lead => {
           if (!lead.data_proximo_contato) return false;

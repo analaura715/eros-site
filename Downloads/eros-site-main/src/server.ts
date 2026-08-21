@@ -49,13 +49,37 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      let response = await handler.fetch(request, env, ctx);
+      response = await normalizeCatastrophicSsrResponse(response);
+      
+      // === Injeção de Segurança Corporativa (Headers) ===
+      const securityHeaders = new Headers(response.headers);
+      securityHeaders.set('X-Content-Type-Options', 'nosniff');
+      securityHeaders.set('X-Frame-Options', 'DENY');
+      securityHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+      securityHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+      
+      // Content-Security-Policy (CSP) - Ajuste as URLs permitidas conforme necessário
+      securityHeaders.set(
+        'Content-Security-Policy', 
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;"
+      );
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: securityHeaders
+      });
+
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {
         status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
+        headers: { 
+          "content-type": "text/html; charset=utf-8",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY"
+        },
       });
     }
   },

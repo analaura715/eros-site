@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { VenuxLogo } from "@/components/venux-logo";
-import { Building2, LifeBuoy, Megaphone, Target, Briefcase, LogOut } from "lucide-react";
+import { Building2, LifeBuoy, Megaphone, Target, Briefcase, LogOut, Users, Settings } from "lucide-react";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -22,11 +23,19 @@ export const Route = createFileRoute("/modulos")({
 function ModulosPage() {
   const { auth, logout } = useStore();
   const navigate = useNavigate();
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   if (!auth) {
     navigate({ to: "/login", replace: true });
     return null;
   }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    setMousePosition({
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
 
   const modulos = [
     {
@@ -61,10 +70,37 @@ function ModulosPage() {
       color: "from-orange-500 to-red-500",
       active: false,
     },
+    {
+      title: "Configurações",
+      description: "Ajustes do sistema, segurança, perfis e gestão completa de usuários.",
+      icon: Settings,
+      path: "/configuracoes",
+      color: "from-slate-600 to-slate-900",
+      active: true,
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col font-sans">
+    <div 
+      className="min-h-screen bg-muted/10 flex flex-col font-sans relative overflow-hidden"
+      onMouseMove={handleMouseMove}
+    >
+      
+      {/* Background Interativo que segue o mouse */}
+      <div 
+        className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300"
+        style={{
+          background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(59, 130, 246, 0.08), transparent 80%)`
+        }}
+      />
+
+      {/* Animated Blobs */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-10 left-10 w-[500px] h-[500px] bg-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob dark:bg-primary/10 dark:mix-blend-lighten" />
+        <div className="absolute top-1/4 right-10 w-[600px] h-[600px] bg-emerald-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000 dark:bg-emerald-500/10 dark:mix-blend-lighten" />
+        <div className="absolute -bottom-32 left-1/4 w-[700px] h-[700px] bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000 dark:bg-purple-500/10 dark:mix-blend-lighten" />
+      </div>
+
       {/* Header */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b bg-background/80 px-6 backdrop-blur">
         <div className="flex items-center gap-2">
@@ -105,7 +141,7 @@ function ModulosPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10">
+      <main className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 relative z-10">
         <div className="w-full max-w-5xl space-y-8">
           <div className="text-center space-y-3">
             <h1 className="text-4xl font-extrabold tracking-tight">Bem-vindo(a), {auth.name.split(' ')[0]}</h1>

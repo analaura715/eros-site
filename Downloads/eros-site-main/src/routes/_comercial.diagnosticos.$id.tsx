@@ -69,7 +69,7 @@ function DiagnosticoDetailComponent() {
   // CÁLCULO DINÂMICO DE ORÇAMENTO
   const p = config?.formulario_builder?.parametros || {};
   const respostas = diagnostico?.respostas_dinamicas || {};
-  const camposConfig = Array.isArray(config?.formulario_builder) ? config.formulario_builder : (config?.formulario_builder?.campos || []);
+  const camposConfig = Array.isArray(config?.formulario_builder) ? config.formulario_builder : (Array.isArray(config?.formulario_builder?.campos) ? config.formulario_builder.campos : []);
   
   let baseCalculo = config?.base_calculo || 0;
   let valorTotalSetup = config?.setup_padrao || 0;
@@ -154,7 +154,7 @@ function DiagnosticoDetailComponent() {
   }
 
   // Pilar 5: Módulos
-  let modulosSelecionados = diagnostico.modulos_selecionados || [];
+  let modulosSelecionados = Array.isArray(diagnostico.modulos_selecionados) ? diagnostico.modulos_selecionados : [];
   let modulos = catalogoModulos.filter(m => modulosSelecionados.includes(m.id));
   let precoModulos = modulos.reduce((acc, curr) => acc + (curr.preco_mensalidade || 0), 0);
   if (precoModulos > 0) acréscimosMensais.push({ motivo: `Módulos Adicionais (${modulos.length})`, valor: precoModulos });
@@ -249,7 +249,7 @@ function DiagnosticoDetailComponent() {
         </div>
         <div className="flex items-center gap-4">
            <span className="text-xs text-slate-400 flex items-center gap-1">
-              <Calendar className="h-3 w-3" /> Gerado em: {format(new Date(diagnostico.created_at), "dd/MM/yyyy", { locale: ptBR })}
+              <Calendar className="h-3 w-3" /> Gerado em: {diagnostico.created_at ? format(new Date(diagnostico.created_at), "dd/MM/yyyy", { locale: ptBR }) : '-'}
            </span>
            <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
              <Trash2 className="h-4 w-4 mr-2" /> Excluir
@@ -457,7 +457,7 @@ function DiagnosticoDetailComponent() {
                 <div className="space-y-2 lg:col-span-3">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Módulos Selecionados</span>
                   <div className="bg-slate-50 p-3 rounded border flex flex-wrap gap-2">
-                    {(diagnostico.modulos_selecionados && diagnostico.modulos_selecionados.length > 0)
+                    {(Array.isArray(diagnostico.modulos_selecionados) && diagnostico.modulos_selecionados.length > 0)
                       ? catalogoModulos.filter(m => diagnostico.modulos_selecionados.includes(m.id)).map(m => (
                           <span key={m.id} className="bg-white border border-slate-200 text-slate-700 text-[11px] uppercase tracking-wide px-2.5 py-1 rounded-md shadow-sm font-semibold">
                             {m.nome}
@@ -480,7 +480,7 @@ function DiagnosticoDetailComponent() {
                   </>
                 )}
 
-                {camposConfig.map((campo: any) => (
+                {Array.isArray(camposConfig) && camposConfig.map((campo: any) => (
                   <div key={campo.id} className="space-y-1">
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider line-clamp-1" title={campo.pergunta}>{campo.pergunta}</span>
                     <p className="font-medium text-slate-800 text-sm bg-slate-50 p-2 rounded border line-clamp-2">

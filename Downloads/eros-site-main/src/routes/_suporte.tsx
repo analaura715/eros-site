@@ -12,8 +12,12 @@ export const Route = createFileRoute("/_suporte")({
 // Matriz global de quem pode acessar qual rota principal do suporte
 const rolesMatrix: Record<string, string[]> = {
   "/chamados": ["Administrador", "Suporte", "Desenvolvedor", "Padrão"],
+  "/pendencias": ["Administrador", "Suporte", "Desenvolvedor", "Padrão"],
+  "/rotinas": ["Administrador", "Suporte", "Desenvolvedor", "Padrão"],
   "/clientes": ["Administrador", "Suporte", "Desenvolvedor", "Padrão"],
-  "/suporte/dashboard": ["Administrador", "Suporte", "Desenvolvedor"],
+  "/painel": ["Administrador", "Suporte", "Desenvolvedor"],
+  "/metricas": ["Administrador", "Suporte", "Desenvolvedor"],
+  "/ajustes": ["Administrador", "Desenvolvedor"],
 };
 
 function SuporteLayout() {

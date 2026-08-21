@@ -10,7 +10,7 @@ export function VenuxLogo({ className }: { className?: string }) {
           <stop offset="0%" stopColor="#003B99" />
           <stop offset="100%" stopColor="#000F2E" />
         </linearGradient>
-        <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+        <filter id="shadow" filterUnits="userSpaceOnUse" x="-20%" y="-20%" width="140%" height="140%">
           <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.3"/>
         </filter>
       </defs>

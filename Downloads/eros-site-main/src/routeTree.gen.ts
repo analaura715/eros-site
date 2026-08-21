@@ -15,7 +15,9 @@ import { Route as SuporteRouteImport } from './routes/_suporte'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ModulosRouteImport } from './routes/modulos'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as ComercialAgendaRouteImport } from './routes/_comercial.agenda'
 import { Route as ComercialConfiguracoesRouteImport } from './routes/_comercial.configuracoes'
 import { Route as ComercialContatosRouteImport } from './routes/_comercial.contatos'
@@ -25,7 +27,13 @@ import { Route as ComercialHistoricoRouteImport } from './routes/_comercial.hist
 import { Route as ComercialOrcamentoAvulsoRouteImport } from './routes/_comercial.orcamento-avulso'
 import { Route as ComercialPipelineRouteImport } from './routes/_comercial.pipeline'
 import { Route as ComercialRelatoriosRouteImport } from './routes/_comercial.relatorios'
+import { Route as ComercialUsuariosConfigRouteImport } from './routes/_comercial.usuarios-config'
+import { Route as SuporteAjustesRouteImport } from './routes/_suporte.ajustes'
 import { Route as SuporteChamadosRouteImport } from './routes/_suporte.chamados'
+import { Route as SuporteMetricasRouteImport } from './routes/_suporte.metricas'
+import { Route as SuportePainelRouteImport } from './routes/_suporte.painel'
+import { Route as SuportePendenciasRouteImport } from './routes/_suporte.pendencias'
+import { Route as SuporteRotinasRouteImport } from './routes/_suporte.rotinas'
 import { Route as QuestionarioIdRouteImport } from './routes/questionario.$id'
 import { Route as ComercialDiagnosticosIndexRouteImport } from './routes/_comercial.diagnosticos.index'
 import { Route as ComercialDiagnosticosIdRouteImport } from './routes/_comercial.diagnosticos.$id'
@@ -33,6 +41,10 @@ import { Route as ComercialEmpresasIndexRouteImport } from './routes/_comercial.
 import { Route as ComercialEmpresasIdRouteImport } from './routes/_comercial.empresas.$id'
 import { Route as ComercialLeadsIndexRouteImport } from './routes/_comercial.leads.index'
 import { Route as ComercialPropostaIdRouteImport } from './routes/_comercial.proposta.$id'
+import { Route as SuporteCadastrosModulosErosRouteImport } from './routes/_suporte.cadastros.modulos-eros'
+import { Route as SuporteCadastrosModulosVenuxRouteImport } from './routes/_suporte.cadastros.modulos-venux'
+import { Route as SuporteCadastrosSetoresRouteImport } from './routes/_suporte.cadastros.setores'
+import { Route as SuporteCadastrosTicketsRouteImport } from './routes/_suporte.cadastros.tickets'
 import { Route as SuporteClientesIndexRouteImport } from './routes/_suporte.clientes.index'
 import { Route as SuporteClientesIdRouteImport } from './routes/_suporte.clientes.$id'
 
@@ -64,9 +76,19 @@ const ModulosRoute = ModulosRouteImport.update({
   path: '/modulos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ComercialAgendaRoute = ComercialAgendaRouteImport.update({
@@ -115,9 +137,39 @@ const ComercialRelatoriosRoute = ComercialRelatoriosRouteImport.update({
   path: '/relatorios',
   getParentRoute: () => ComercialRoute,
 } as any)
+const ComercialUsuariosConfigRoute = ComercialUsuariosConfigRouteImport.update({
+  id: '/usuarios-config',
+  path: '/usuarios-config',
+  getParentRoute: () => ComercialRoute,
+} as any)
+const SuporteAjustesRoute = SuporteAjustesRouteImport.update({
+  id: '/ajustes',
+  path: '/ajustes',
+  getParentRoute: () => SuporteRoute,
+} as any)
 const SuporteChamadosRoute = SuporteChamadosRouteImport.update({
   id: '/chamados',
   path: '/chamados',
+  getParentRoute: () => SuporteRoute,
+} as any)
+const SuporteMetricasRoute = SuporteMetricasRouteImport.update({
+  id: '/metricas',
+  path: '/metricas',
+  getParentRoute: () => SuporteRoute,
+} as any)
+const SuportePainelRoute = SuportePainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => SuporteRoute,
+} as any)
+const SuportePendenciasRoute = SuportePendenciasRouteImport.update({
+  id: '/pendencias',
+  path: '/pendencias',
+  getParentRoute: () => SuporteRoute,
+} as any)
+const SuporteRotinasRoute = SuporteRotinasRouteImport.update({
+  id: '/rotinas',
+  path: '/rotinas',
   getParentRoute: () => SuporteRoute,
 } as any)
 const QuestionarioIdRoute = QuestionarioIdRouteImport.update({
@@ -156,6 +208,28 @@ const ComercialPropostaIdRoute = ComercialPropostaIdRouteImport.update({
   path: '/proposta/$id',
   getParentRoute: () => ComercialRoute,
 } as any)
+const SuporteCadastrosModulosErosRoute =
+  SuporteCadastrosModulosErosRouteImport.update({
+    id: '/cadastros/modulos-eros',
+    path: '/cadastros/modulos-eros',
+    getParentRoute: () => SuporteRoute,
+  } as any)
+const SuporteCadastrosModulosVenuxRoute =
+  SuporteCadastrosModulosVenuxRouteImport.update({
+    id: '/cadastros/modulos-venux',
+    path: '/cadastros/modulos-venux',
+    getParentRoute: () => SuporteRoute,
+  } as any)
+const SuporteCadastrosSetoresRoute = SuporteCadastrosSetoresRouteImport.update({
+  id: '/cadastros/setores',
+  path: '/cadastros/setores',
+  getParentRoute: () => SuporteRoute,
+} as any)
+const SuporteCadastrosTicketsRoute = SuporteCadastrosTicketsRouteImport.update({
+  id: '/cadastros/tickets',
+  path: '/cadastros/tickets',
+  getParentRoute: () => SuporteRoute,
+} as any)
 const SuporteClientesIndexRoute = SuporteClientesIndexRouteImport.update({
   id: '/clientes/',
   path: '/clientes/',
@@ -172,7 +246,9 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/modulos': typeof ModulosRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/register': typeof RegisterRoute
+  '/termos': typeof TermosRoute
   '/agenda': typeof ComercialAgendaRoute
   '/configuracoes': typeof ComercialConfiguracoesRoute
   '/contatos': typeof ComercialContatosRoute
@@ -182,11 +258,21 @@ export interface FileRoutesByFullPath {
   '/orcamento-avulso': typeof ComercialOrcamentoAvulsoRoute
   '/pipeline': typeof ComercialPipelineRoute
   '/relatorios': typeof ComercialRelatoriosRoute
+  '/usuarios-config': typeof ComercialUsuariosConfigRoute
+  '/ajustes': typeof SuporteAjustesRoute
   '/chamados': typeof SuporteChamadosRoute
+  '/metricas': typeof SuporteMetricasRoute
+  '/painel': typeof SuportePainelRoute
+  '/pendencias': typeof SuportePendenciasRoute
+  '/rotinas': typeof SuporteRotinasRoute
   '/questionario/$id': typeof QuestionarioIdRoute
   '/diagnosticos/$id': typeof ComercialDiagnosticosIdRoute
   '/empresas/$id': typeof ComercialEmpresasIdRoute
   '/proposta/$id': typeof ComercialPropostaIdRoute
+  '/cadastros/modulos-eros': typeof SuporteCadastrosModulosErosRoute
+  '/cadastros/modulos-venux': typeof SuporteCadastrosModulosVenuxRoute
+  '/cadastros/setores': typeof SuporteCadastrosSetoresRoute
+  '/cadastros/tickets': typeof SuporteCadastrosTicketsRoute
   '/clientes/$id': typeof SuporteClientesIdRoute
   '/diagnosticos/': typeof ComercialDiagnosticosIndexRoute
   '/empresas/': typeof ComercialEmpresasIndexRoute
@@ -198,7 +284,9 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/modulos': typeof ModulosRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/register': typeof RegisterRoute
+  '/termos': typeof TermosRoute
   '/agenda': typeof ComercialAgendaRoute
   '/configuracoes': typeof ComercialConfiguracoesRoute
   '/contatos': typeof ComercialContatosRoute
@@ -208,11 +296,21 @@ export interface FileRoutesByTo {
   '/orcamento-avulso': typeof ComercialOrcamentoAvulsoRoute
   '/pipeline': typeof ComercialPipelineRoute
   '/relatorios': typeof ComercialRelatoriosRoute
+  '/usuarios-config': typeof ComercialUsuariosConfigRoute
+  '/ajustes': typeof SuporteAjustesRoute
   '/chamados': typeof SuporteChamadosRoute
+  '/metricas': typeof SuporteMetricasRoute
+  '/painel': typeof SuportePainelRoute
+  '/pendencias': typeof SuportePendenciasRoute
+  '/rotinas': typeof SuporteRotinasRoute
   '/questionario/$id': typeof QuestionarioIdRoute
   '/diagnosticos/$id': typeof ComercialDiagnosticosIdRoute
   '/empresas/$id': typeof ComercialEmpresasIdRoute
   '/proposta/$id': typeof ComercialPropostaIdRoute
+  '/cadastros/modulos-eros': typeof SuporteCadastrosModulosErosRoute
+  '/cadastros/modulos-venux': typeof SuporteCadastrosModulosVenuxRoute
+  '/cadastros/setores': typeof SuporteCadastrosSetoresRoute
+  '/cadastros/tickets': typeof SuporteCadastrosTicketsRoute
   '/clientes/$id': typeof SuporteClientesIdRoute
   '/diagnosticos': typeof ComercialDiagnosticosIndexRoute
   '/empresas': typeof ComercialEmpresasIndexRoute
@@ -227,7 +325,9 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/modulos': typeof ModulosRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/register': typeof RegisterRoute
+  '/termos': typeof TermosRoute
   '/_comercial/agenda': typeof ComercialAgendaRoute
   '/_comercial/configuracoes': typeof ComercialConfiguracoesRoute
   '/_comercial/contatos': typeof ComercialContatosRoute
@@ -237,11 +337,21 @@ export interface FileRoutesById {
   '/_comercial/orcamento-avulso': typeof ComercialOrcamentoAvulsoRoute
   '/_comercial/pipeline': typeof ComercialPipelineRoute
   '/_comercial/relatorios': typeof ComercialRelatoriosRoute
+  '/_comercial/usuarios-config': typeof ComercialUsuariosConfigRoute
+  '/_suporte/ajustes': typeof SuporteAjustesRoute
   '/_suporte/chamados': typeof SuporteChamadosRoute
+  '/_suporte/metricas': typeof SuporteMetricasRoute
+  '/_suporte/painel': typeof SuportePainelRoute
+  '/_suporte/pendencias': typeof SuportePendenciasRoute
+  '/_suporte/rotinas': typeof SuporteRotinasRoute
   '/questionario/$id': typeof QuestionarioIdRoute
   '/_comercial/diagnosticos/$id': typeof ComercialDiagnosticosIdRoute
   '/_comercial/empresas/$id': typeof ComercialEmpresasIdRoute
   '/_comercial/proposta/$id': typeof ComercialPropostaIdRoute
+  '/_suporte/cadastros/modulos-eros': typeof SuporteCadastrosModulosErosRoute
+  '/_suporte/cadastros/modulos-venux': typeof SuporteCadastrosModulosVenuxRoute
+  '/_suporte/cadastros/setores': typeof SuporteCadastrosSetoresRoute
+  '/_suporte/cadastros/tickets': typeof SuporteCadastrosTicketsRoute
   '/_suporte/clientes/$id': typeof SuporteClientesIdRoute
   '/_comercial/diagnosticos/': typeof ComercialDiagnosticosIndexRoute
   '/_comercial/empresas/': typeof ComercialEmpresasIndexRoute
@@ -255,7 +365,9 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/modulos'
+    | '/privacidade'
     | '/register'
+    | '/termos'
     | '/agenda'
     | '/configuracoes'
     | '/contatos'
@@ -265,11 +377,21 @@ export interface FileRouteTypes {
     | '/orcamento-avulso'
     | '/pipeline'
     | '/relatorios'
+    | '/usuarios-config'
+    | '/ajustes'
     | '/chamados'
+    | '/metricas'
+    | '/painel'
+    | '/pendencias'
+    | '/rotinas'
     | '/questionario/$id'
     | '/diagnosticos/$id'
     | '/empresas/$id'
     | '/proposta/$id'
+    | '/cadastros/modulos-eros'
+    | '/cadastros/modulos-venux'
+    | '/cadastros/setores'
+    | '/cadastros/tickets'
     | '/clientes/$id'
     | '/diagnosticos/'
     | '/empresas/'
@@ -281,7 +403,9 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/modulos'
+    | '/privacidade'
     | '/register'
+    | '/termos'
     | '/agenda'
     | '/configuracoes'
     | '/contatos'
@@ -291,11 +415,21 @@ export interface FileRouteTypes {
     | '/orcamento-avulso'
     | '/pipeline'
     | '/relatorios'
+    | '/usuarios-config'
+    | '/ajustes'
     | '/chamados'
+    | '/metricas'
+    | '/painel'
+    | '/pendencias'
+    | '/rotinas'
     | '/questionario/$id'
     | '/diagnosticos/$id'
     | '/empresas/$id'
     | '/proposta/$id'
+    | '/cadastros/modulos-eros'
+    | '/cadastros/modulos-venux'
+    | '/cadastros/setores'
+    | '/cadastros/tickets'
     | '/clientes/$id'
     | '/diagnosticos'
     | '/empresas'
@@ -309,7 +443,9 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/modulos'
+    | '/privacidade'
     | '/register'
+    | '/termos'
     | '/_comercial/agenda'
     | '/_comercial/configuracoes'
     | '/_comercial/contatos'
@@ -319,11 +455,21 @@ export interface FileRouteTypes {
     | '/_comercial/orcamento-avulso'
     | '/_comercial/pipeline'
     | '/_comercial/relatorios'
+    | '/_comercial/usuarios-config'
+    | '/_suporte/ajustes'
     | '/_suporte/chamados'
+    | '/_suporte/metricas'
+    | '/_suporte/painel'
+    | '/_suporte/pendencias'
+    | '/_suporte/rotinas'
     | '/questionario/$id'
     | '/_comercial/diagnosticos/$id'
     | '/_comercial/empresas/$id'
     | '/_comercial/proposta/$id'
+    | '/_suporte/cadastros/modulos-eros'
+    | '/_suporte/cadastros/modulos-venux'
+    | '/_suporte/cadastros/setores'
+    | '/_suporte/cadastros/tickets'
     | '/_suporte/clientes/$id'
     | '/_comercial/diagnosticos/'
     | '/_comercial/empresas/'
@@ -338,7 +484,9 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   ModulosRoute: typeof ModulosRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   RegisterRoute: typeof RegisterRoute
+  TermosRoute: typeof TermosRoute
   QuestionarioIdRoute: typeof QuestionarioIdRoute
 }
 
@@ -386,11 +534,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModulosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_comercial/agenda': {
@@ -456,11 +618,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComercialRelatoriosRouteImport
       parentRoute: typeof ComercialRoute
     }
+    '/_comercial/usuarios-config': {
+      id: '/_comercial/usuarios-config'
+      path: '/usuarios-config'
+      fullPath: '/usuarios-config'
+      preLoaderRoute: typeof ComercialUsuariosConfigRouteImport
+      parentRoute: typeof ComercialRoute
+    }
+    '/_suporte/ajustes': {
+      id: '/_suporte/ajustes'
+      path: '/ajustes'
+      fullPath: '/ajustes'
+      preLoaderRoute: typeof SuporteAjustesRouteImport
+      parentRoute: typeof SuporteRoute
+    }
     '/_suporte/chamados': {
       id: '/_suporte/chamados'
       path: '/chamados'
       fullPath: '/chamados'
       preLoaderRoute: typeof SuporteChamadosRouteImport
+      parentRoute: typeof SuporteRoute
+    }
+    '/_suporte/metricas': {
+      id: '/_suporte/metricas'
+      path: '/metricas'
+      fullPath: '/metricas'
+      preLoaderRoute: typeof SuporteMetricasRouteImport
+      parentRoute: typeof SuporteRoute
+    }
+    '/_suporte/painel': {
+      id: '/_suporte/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof SuportePainelRouteImport
+      parentRoute: typeof SuporteRoute
+    }
+    '/_suporte/pendencias': {
+      id: '/_suporte/pendencias'
+      path: '/pendencias'
+      fullPath: '/pendencias'
+      preLoaderRoute: typeof SuportePendenciasRouteImport
+      parentRoute: typeof SuporteRoute
+    }
+    '/_suporte/rotinas': {
+      id: '/_suporte/rotinas'
+      path: '/rotinas'
+      fullPath: '/rotinas'
+      preLoaderRoute: typeof SuporteRotinasRouteImport
       parentRoute: typeof SuporteRoute
     }
     '/questionario/$id': {
@@ -512,6 +716,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ComercialPropostaIdRouteImport
       parentRoute: typeof ComercialRoute
     }
+    '/_suporte/cadastros/modulos-eros': {
+      id: '/_suporte/cadastros/modulos-eros'
+      path: '/cadastros/modulos-eros'
+      fullPath: '/cadastros/modulos-eros'
+      preLoaderRoute: typeof SuporteCadastrosModulosErosRouteImport
+      parentRoute: typeof SuporteRoute
+    }
+    '/_suporte/cadastros/modulos-venux': {
+      id: '/_suporte/cadastros/modulos-venux'
+      path: '/cadastros/modulos-venux'
+      fullPath: '/cadastros/modulos-venux'
+      preLoaderRoute: typeof SuporteCadastrosModulosVenuxRouteImport
+      parentRoute: typeof SuporteRoute
+    }
+    '/_suporte/cadastros/setores': {
+      id: '/_suporte/cadastros/setores'
+      path: '/cadastros/setores'
+      fullPath: '/cadastros/setores'
+      preLoaderRoute: typeof SuporteCadastrosSetoresRouteImport
+      parentRoute: typeof SuporteRoute
+    }
+    '/_suporte/cadastros/tickets': {
+      id: '/_suporte/cadastros/tickets'
+      path: '/cadastros/tickets'
+      fullPath: '/cadastros/tickets'
+      preLoaderRoute: typeof SuporteCadastrosTicketsRouteImport
+      parentRoute: typeof SuporteRoute
+    }
     '/_suporte/clientes/': {
       id: '/_suporte/clientes/'
       path: '/clientes'
@@ -539,6 +771,7 @@ interface ComercialRouteChildren {
   ComercialOrcamentoAvulsoRoute: typeof ComercialOrcamentoAvulsoRoute
   ComercialPipelineRoute: typeof ComercialPipelineRoute
   ComercialRelatoriosRoute: typeof ComercialRelatoriosRoute
+  ComercialUsuariosConfigRoute: typeof ComercialUsuariosConfigRoute
   ComercialDiagnosticosIdRoute: typeof ComercialDiagnosticosIdRoute
   ComercialEmpresasIdRoute: typeof ComercialEmpresasIdRoute
   ComercialPropostaIdRoute: typeof ComercialPropostaIdRoute
@@ -557,6 +790,7 @@ const ComercialRouteChildren: ComercialRouteChildren = {
   ComercialOrcamentoAvulsoRoute: ComercialOrcamentoAvulsoRoute,
   ComercialPipelineRoute: ComercialPipelineRoute,
   ComercialRelatoriosRoute: ComercialRelatoriosRoute,
+  ComercialUsuariosConfigRoute: ComercialUsuariosConfigRoute,
   ComercialDiagnosticosIdRoute: ComercialDiagnosticosIdRoute,
   ComercialEmpresasIdRoute: ComercialEmpresasIdRoute,
   ComercialPropostaIdRoute: ComercialPropostaIdRoute,
@@ -570,13 +804,31 @@ const ComercialRouteWithChildren = ComercialRoute._addFileChildren(
 )
 
 interface SuporteRouteChildren {
+  SuporteAjustesRoute: typeof SuporteAjustesRoute
   SuporteChamadosRoute: typeof SuporteChamadosRoute
+  SuporteMetricasRoute: typeof SuporteMetricasRoute
+  SuportePainelRoute: typeof SuportePainelRoute
+  SuportePendenciasRoute: typeof SuportePendenciasRoute
+  SuporteRotinasRoute: typeof SuporteRotinasRoute
+  SuporteCadastrosModulosErosRoute: typeof SuporteCadastrosModulosErosRoute
+  SuporteCadastrosModulosVenuxRoute: typeof SuporteCadastrosModulosVenuxRoute
+  SuporteCadastrosSetoresRoute: typeof SuporteCadastrosSetoresRoute
+  SuporteCadastrosTicketsRoute: typeof SuporteCadastrosTicketsRoute
   SuporteClientesIdRoute: typeof SuporteClientesIdRoute
   SuporteClientesIndexRoute: typeof SuporteClientesIndexRoute
 }
 
 const SuporteRouteChildren: SuporteRouteChildren = {
+  SuporteAjustesRoute: SuporteAjustesRoute,
   SuporteChamadosRoute: SuporteChamadosRoute,
+  SuporteMetricasRoute: SuporteMetricasRoute,
+  SuportePainelRoute: SuportePainelRoute,
+  SuportePendenciasRoute: SuportePendenciasRoute,
+  SuporteRotinasRoute: SuporteRotinasRoute,
+  SuporteCadastrosModulosErosRoute: SuporteCadastrosModulosErosRoute,
+  SuporteCadastrosModulosVenuxRoute: SuporteCadastrosModulosVenuxRoute,
+  SuporteCadastrosSetoresRoute: SuporteCadastrosSetoresRoute,
+  SuporteCadastrosTicketsRoute: SuporteCadastrosTicketsRoute,
   SuporteClientesIdRoute: SuporteClientesIdRoute,
   SuporteClientesIndexRoute: SuporteClientesIndexRoute,
 }
@@ -591,7 +843,9 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   ModulosRoute: ModulosRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   RegisterRoute: RegisterRoute,
+  TermosRoute: TermosRoute,
   QuestionarioIdRoute: QuestionarioIdRoute,
 }
 export const routeTree = rootRouteImport

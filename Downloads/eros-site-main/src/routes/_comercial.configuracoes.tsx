@@ -12,16 +12,21 @@ import { Link } from '@tanstack/react-router';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ModulosCrud } from "@/components/modulos-crud";
+import { SettingsUsersPanel } from "@/components/configuracoes/SettingsUsersPanel";
+import { Users } from 'lucide-react';
 
 export const Route = createFileRoute('/_comercial/configuracoes')({
   component: ConfiguracoesComponent,
 });
 
-type Tab = 'perfil' | 'seguranca' | 'preferencias' | 'notificacoes' | 'precificacao';
+type Tab = 'perfil' | 'seguranca' | 'preferencias' | 'notificacoes' | 'precificacao' | 'usuarios';
 
-function ConfiguracoesComponent() {
+export function ConfiguracoesComponent() {
   const { auth: user, updateProfile, theme: globalTheme, setTheme: setGlobalTheme } = useStore();
-  const [activeTab, setActiveTab] = useState<Tab>('perfil');
+  const searchParams = new URLSearchParams(window.location.search);
+  const initialTab = (searchParams.get('tab') as Tab) || 'perfil';
+  
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -139,8 +144,8 @@ function ConfiguracoesComponent() {
             <Settings className="h-6 w-6 text-primary" />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Configurações</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Gerencie suas preferências e segurança.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Meu Perfil</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Gerencie sua conta e suas preferências.</p>
           </div>
         </div>
         <Button 
@@ -205,14 +210,30 @@ function ConfiguracoesComponent() {
                 </div>
                 {activeTab === 'notificacoes' && <ChevronRight className="h-4 w-4 opacity-50" />}
               </button>
+
+              <button
+                onClick={() => setActiveTab('usuarios')}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${activeTab === 'usuarios' ? 'bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <Users className={`h-4 w-4 ${activeTab === 'usuarios' ? 'text-primary' : ''}`} /> 
+                  Gestão de Usuários
+                </div>
+                {activeTab === 'usuarios' && <ChevronRight className="h-4 w-4 opacity-50" />}
+              </button>
               
             </nav>
           </div>
 
           {/* Área de Conteúdo */}
           <div className="flex-1 overflow-y-auto pb-10">
-            <div className="max-w-3xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="max-w-[1000px] space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               
+              {/* ABA: USUÁRIOS */}
+              {activeTab === 'usuarios' && (
+                <SettingsUsersPanel />
+              )}
+
               {/* ABA: PERFIL */}
               {activeTab === 'perfil' && (
                 <>

@@ -6,12 +6,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Eye, Edit, Trash2, Building2, MapPin, Target, Flame, Snowflake, Sun, Download, Printer } from "lucide-react";
+import { Search, Plus, Eye, Edit, Trash2, Building2, MapPin, Target, Flame, Snowflake, Sun, Download, Printer, Archive, ArchiveRestore } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { LeadForm, LeadFormValues } from '@/components/forms/lead-form';
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute('/_comercial/leads/')({
   component: LeadsComponent,
@@ -23,6 +25,8 @@ function LeadsComponent() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
+  const [currentTab, setCurrentTab] = useState('ativos');
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [leadEditando, setLeadEditando] = useState<Partial<LeadFormValues> | undefined>(undefined);
@@ -55,6 +59,10 @@ function LeadsComponent() {
            
     const matchStatus = statusFilter === 'todos' || e.status === statusFilter;
     
+    const isArquivado = e.status === 'Arquivado';
+    if (currentTab === 'ativos' && isArquivado) return false;
+    if (currentTab === 'arquivados' && !isArquivado) return false;
+
     return matchSearch && matchStatus;
   });
 
@@ -106,6 +114,69 @@ function LeadsComponent() {
         fetchLeads();
         setIsSheetOpen(false);
       }
+    }
+  };
+
+  const handleArchiveLead = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (confirm("Deseja arquivar este Lead? Ele não aparecerá no funil principal.")) {
+      const { error } = await supabase.from('leads').update({ status: 'Arquivado' }).eq('id', id);
+      if (error) {
+        toast.error("Erro ao arquivar lead.");
+      } else {
+        toast.success("Lead arquivado com sucesso.");
+        fetchLeads();
+      }
+    }
+  };
+
+  const handleUnarchiveLead = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (confirm("Deseja restaurar este Lead para o funil ativo?")) {
+      const { error } = await supabase.from('leads').update({ status: 'Em observação' }).eq('id', id);
+      if (error) {
+        toast.error("Erro ao restaurar lead.");
+      } else {
+        toast.success("Lead restaurado com sucesso.");
+        fetchLeads();
+      }
+    }
+  };
+
+  const handleGenerateRoute = () => {
+    const leadsToVisit = leads.filter(l => selectedLeads.includes(l.id));
+    const addresses = leadsToVisit.map(l => {
+      const parts = [l.logradouro, l.numero, l.bairro, l.cidade, l.uf].filter(Boolean);
+      return parts.join(', ');
+    }).filter(a => a.length > 0);
+
+    if (addresses.length === 0) {
+      toast.error("Nenhum dos leads selecionados possui endereço completo cadastrado.");
+      return;
+    }
+
+    // Ponto de partida fixo solicitado pelo usuário
+    const origin = "R. São José, 2295 - Centro, Mirassol - SP, 15130-053";
+    
+    // Combina o ponto de partida com os endereços dos leads
+    const allStops = [origin, ...addresses];
+
+    const url = `https://www.google.com/maps/dir/${allStops.map(a => encodeURIComponent(a)).join('/')}`;
+    window.open(url, '_blank');
+    toast.success("Rota gerada no Google Maps com partida em Mirassol!");
+    setSelectedLeads([]);
+  };
+
+  const toggleLeadSelection = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedLeads(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleAllSelection = () => {
+    if (selectedLeads.length === filtered.length && filtered.length > 0) {
+      setSelectedLeads([]);
+    } else {
+      setSelectedLeads(filtered.map(l => l.id));
     }
   };
 
@@ -183,6 +254,7 @@ function LeadsComponent() {
       case 'Proposta enviada': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'Sem interesse': return 'bg-red-100 text-red-700 border-red-200';
       case 'Sem resposta': return 'bg-gray-100 text-gray-500 border-gray-200';
+      case 'Arquivado': return 'bg-slate-200 text-slate-500 border-slate-300 line-through decoration-slate-400';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
@@ -385,10 +457,38 @@ function LeadsComponent() {
                 <SelectItem value="Proposta enviada">Proposta enviada</SelectItem>
                 <SelectItem value="Sem interesse">Sem interesse</SelectItem>
                 <SelectItem value="Sem resposta">Sem resposta</SelectItem>
+                <SelectItem value="Arquivado">Arquivado</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
+
+        <Tabs value={currentTab} onValueChange={(v) => { setCurrentTab(v); setSelectedLeads([]); }} className="w-full flex flex-col gap-4">
+          <div className="flex justify-start">
+            <TabsList className="bg-card border shadow-sm">
+              <TabsTrigger value="ativos" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                Leads Ativos
+              </TabsTrigger>
+              <TabsTrigger value="arquivados" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                Arquivados
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {selectedLeads.length > 0 && (
+            <div className="bg-blue-600 text-white px-5 py-3 rounded-2xl flex items-center justify-between shadow-lg animate-in slide-in-from-bottom-2 fade-in">
+              <span className="text-sm font-semibold">{selectedLeads.length} lead(s) selecionado(s)</span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="bg-white/10 text-white border-white/20 hover:bg-white/20 hover:text-white" onClick={handleGenerateRoute}>
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Gerar Rota de Viagem
+                </Button>
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white" onClick={() => setSelectedLeads([])}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
 
         {/* Tabela de Leads */}
         <div className="bg-card border rounded-2xl shadow-sm flex flex-col overflow-hidden">
@@ -396,7 +496,14 @@ function LeadsComponent() {
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="border-b-border/50 hover:bg-transparent">
-                  <TableHead className="w-[280px] pl-6 font-semibold text-foreground/80">Lead / Empresa</TableHead>
+                  <TableHead className="w-[40px] pl-6">
+                    <Checkbox 
+                      checked={filtered.length > 0 && selectedLeads.length === filtered.length}
+                      onCheckedChange={toggleAllSelection}
+                      aria-label="Selecionar todos"
+                    />
+                  </TableHead>
+                  <TableHead className="w-[280px] font-semibold text-foreground/80">Lead / Empresa</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Contato Principal</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Temperatura</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Status</TableHead>
@@ -408,10 +515,17 @@ function LeadsComponent() {
                 {filtered.map((lead) => (
                   <TableRow 
                     key={lead.id}
-                    className="cursor-pointer group hover:bg-primary/[0.02] border-b-border/50 transition-colors duration-200"
+                    className={`cursor-pointer group hover:bg-primary/[0.02] border-b-border/50 transition-colors duration-200 ${selectedLeads.includes(lead.id) ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''}`}
                     onClick={() => handleEditLead(lead, { stopPropagation: () => {} } as any)}
                   >
-                    <TableCell className="pl-6 py-4">
+                    <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox 
+                        checked={selectedLeads.includes(lead.id)}
+                        onCheckedChange={() => toggleLeadSelection(lead.id)}
+                        aria-label={`Selecionar ${lead.nome}`}
+                      />
+                    </TableCell>
+                    <TableCell className="py-4">
                       <div className="flex flex-col">
                         <span className="font-semibold text-foreground text-sm">{lead.nome}</span>
                         <span className="text-[11px] text-muted-foreground mt-0.5">Origem: {lead.origem || 'N/A'}</span>
@@ -468,6 +582,29 @@ function LeadsComponent() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+                        
+                        {lead.status === 'Arquivado' ? (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-full hover:bg-green-100 hover:text-green-600 transition-colors"
+                            title="Restaurar Lead"
+                            onClick={(e) => handleUnarchiveLead(lead.id, e)}
+                          >
+                            <ArchiveRestore className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-full hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                            title="Arquivar"
+                            onClick={(e) => handleArchiveLead(lead.id, e)}
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        )}
+
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -483,7 +620,7 @@ function LeadsComponent() {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center">
                         <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
                           <Target className="h-5 w-5 opacity-40" />
@@ -503,10 +640,11 @@ function LeadsComponent() {
           
           <div className="bg-muted/30 border-t px-6 py-4 text-xs font-medium text-muted-foreground flex items-center justify-between">
             <span className="flex items-center gap-2">
-              Exibindo <strong>{filtered.length}</strong> leads de prospecção.
+              Exibindo <strong>{filtered.length}</strong> leads {currentTab === 'ativos' ? 'de prospecção.' : 'arquivados.'}
             </span>
           </div>
         </div>
+        </Tabs>
       </div>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>

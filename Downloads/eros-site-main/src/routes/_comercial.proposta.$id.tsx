@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Check, MapPin, Phone } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useStore } from "@/lib/store";
+import { toast } from "sonner";
+import { useSuporte } from "@/hooks/useSuporte";
+import { Lock } from "lucide-react";
 
 export const Route = createFileRoute('/_comercial/proposta/$id')({
   component: PropostaDocumento,
@@ -25,20 +29,34 @@ function PropostaDocumento() {
   const [catalogoModulos, setCatalogoModulos] = useState<any[]>([]);
   const [configOrcamento, setConfigOrcamento] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Snapshots
+  const [isFrozen, setIsFrozen] = useState(false);
+  const { fetchSnapshot, congelarDiagnostico } = useSuporte();
+  const { auth } = useStore();
 
   useEffect(() => {
-    const fetchDiagnostico = async () => {
+    const fetchDados = async () => {
       if (id === 'avulso') {
-        setDiagnostico({
-          razao_social: nomeAvulso,
-          cidade_uf: 'Brasil',
-          telefone_whatsapp: '-'
-        });
+        setDiagnostico({ razao_social: nomeAvulso, cidade_uf: 'Brasil', telefone_whatsapp: '-' });
         setLoading(false);
         return;
       }
 
       setLoading(true);
+      
+      // 1. Tentar carregar Snapshot Congelado
+      const snap = await fetchSnapshot(id);
+      if (snap) {
+        setIsFrozen(true);
+        setDiagnostico(snap.payload_estatico.diagnostico);
+        setCatalogoModulos(snap.payload_estatico.catalogoModulos);
+        setConfigOrcamento(snap.payload_estatico.configOrcamento);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Se não tem snapshot, busca em tempo real
       const [diagRes, modulosRes, configRes] = await Promise.all([
         supabase.from('diagnosticos').select('*').eq('id', id).maybeSingle(),
         supabase.from('catalogo_modulos').select('*'),
@@ -50,11 +68,26 @@ function PropostaDocumento() {
       if (configRes.data) setConfigOrcamento(configRes.data);
       setLoading(false);
     };
-    fetchDiagnostico();
+    fetchDados();
   }, [id]);
 
   if (loading) return <div className="p-8 text-center text-slate-500">Gerando documento de proposta...</div>;
   if (!diagnostico) return <div className="p-8 text-center text-red-500">Diagnóstico não encontrado.</div>;
+
+  const handleCongelar = async () => {
+    if (id === 'avulso') {
+      toast.error("Orçamentos avulsos não podem ser congelados.");
+      return;
+    }
+    try {
+      const payload = { diagnostico, catalogoModulos, configOrcamento, searchParams: search };
+      await congelarDiagnostico(id, payload, auth?.name || "Usuário");
+      setIsFrozen(true);
+      toast.success("Proposta congelada com sucesso! Nenhuma alteração futura afetará este documento.");
+    } catch (e) {
+      toast.error("Erro ao congelar proposta.");
+    }
+  };
 
   const valorTotal = isManual ? (Number(search.plano_valor) || Number(search.mensalidade) || 0) : 0;
   const descontoBase = isManual ? (Number(search.desconto) || 0) : 0;
@@ -278,6 +311,7 @@ function PropostaDocumento() {
 
   // Renderizador principal dinâmico
   const renderDynamicTemplate = () => {
+    if (!Array.isArray(templateProposta)) return null;
     return templateProposta.map((block: any) => {
       switch (block.type) {
         case 'header': return renderHeaderBlock(block.id);
@@ -306,9 +340,21 @@ function PropostaDocumento() {
         <Button variant="outline" onClick={() => history.back()} className="bg-white hover:bg-slate-50">
           <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
         </Button>
-        <Button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
-          <Printer className="w-4 h-4 mr-2" /> Gerar PDF
-        </Button>
+        <div className="flex items-center gap-3">
+          {isFrozen && (
+            <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-100 px-3 py-1.5 rounded-md border border-amber-200">
+              <Lock className="w-4 h-4" /> Proposta Congelada
+            </div>
+          )}
+          {!isFrozen && (
+            <Button variant="secondary" onClick={handleCongelar} className="bg-white text-slate-800 border-slate-200 hover:bg-slate-100 shadow-sm">
+              <Lock className="w-4 h-4 mr-2" /> Congelar Proposta
+            </Button>
+          )}
+          <Button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
+            <Printer className="w-4 h-4 mr-2" /> Gerar PDF
+          </Button>
+        </div>
       </div>
 
       <div className="max-w-[210mm] min-h-[297mm] mx-auto bg-white shadow-xl print:shadow-none print:max-w-none print:mx-0 overflow-visible relative text-slate-800 pb-0 flex flex-col">
