@@ -219,6 +219,22 @@ function ChamadosPage() {
     }
   };
 
+  const handleDeleteTicket = async (ticket: Ticket) => {
+    if (!window.confirm("ATENÇÃO: Deseja realmente EXCLUIR permanentemente este chamado?")) return;
+    try {
+      const { error } = await supabase.from('suporte_chamados').delete().eq('id', ticket.id);
+      if (error) throw error;
+      toast.success("Chamado excluído com sucesso.");
+      setTickets(prev => prev.filter(t => t.id !== ticket.id));
+      if (ticket.status === 'Em Andamento') {
+        clearActiveTicket();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao excluir o chamado.");
+    }
+  };
+
   const handleFinalize = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ticketToFinalize) return;
@@ -724,11 +740,7 @@ function ChamadosPage() {
                     
                     {/* ID */}
                     <TableCell className="align-top py-4">
-                      <div className="font-medium text-foreground">CH-{ticket.ticket_number}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                        {getTypeIcon(ticket.tipo)}
-                        {ticket.tipo}
-                      </div>
+                      <div className="font-semibold text-lg text-foreground">CH-{ticket.ticket_number}</div>
                     </TableCell>
                     
                     {/* Detalhes */}
@@ -763,22 +775,22 @@ function ChamadosPage() {
 
                     {/* Atribuição */}
                     <TableCell className="align-top py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium flex items-center gap-1">
-                          <User className="w-3 h-3 text-muted-foreground" />
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-sm font-medium flex items-center gap-1.5">
+                          <User className="w-4 h-4 text-muted-foreground" />
                           {ticket.responsavel || <span className="text-muted-foreground italic">Não atribuído</span>}
                         </span>
                         {(ticket.data_inicio || ticket.data_fim) && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                            <CalendarIcon className="w-3 h-3" />
-                            {ticket.data_inicio ? format(new Date(ticket.data_inicio), 'dd/MM/yy') : '?'} 
-                            {ticket.data_fim && ticket.data_fim !== ticket.data_inicio ? ` até ${format(new Date(ticket.data_fim), 'dd/MM/yy')}` : ''}
+                          <span className="text-sm text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5 mt-0.5">
+                            <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                            {ticket.data_inicio ? format(new Date(ticket.data_inicio), 'dd/MM/yy') : '?'}
+                            {ticket.data_fim && ticket.data_fim !== ticket.data_inicio && ` até ${format(new Date(ticket.data_fim), 'dd/MM/yy')}`}
                           </span>
                         )}
                         {(ticket.hora_inicio || ticket.hora_fim) && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <Clock className="w-3 h-3" />
-                            {ticket.hora_inicio || '?'} - {ticket.hora_fim || '?'}
+                          <span className="text-sm text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            {ticket.hora_inicio ? ticket.hora_inicio.substring(0,5) : '?'} - {ticket.hora_fim ? ticket.hora_fim.substring(0,5) : '?'}
                           </span>
                         )}
                         {ticket.imagens && ticket.imagens.length > 0 && (
@@ -792,13 +804,13 @@ function ChamadosPage() {
                     {/* Status & Prioridade */}
                     <TableCell className="align-top py-4">
                       <div className="flex flex-col items-start gap-2">
-                        <div className="flex items-center">
+                        <div className="flex items-center scale-110 origin-left">
                           {getStatusBadge(ticket.status)}
                           {ticket.status === 'Em Andamento' && ticket.created_at && (
                             <ActiveTimer startTime={ticket.created_at} />
                           )}
                         </div>
-                        <span className={`text-xs font-medium ${getPriorityColor(ticket.prioridade)}`}>
+                        <span className={`text-sm mt-1 font-semibold ${getPriorityColor(ticket.prioridade)}`}>
                           Prioridade {ticket.prioridade}
                         </span>
                       </div>
@@ -811,7 +823,7 @@ function ChamadosPage() {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="h-8 border-red-200 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                            className="h-9 px-3 border-red-200 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleCancelTicket(ticket);
@@ -821,11 +833,24 @@ function ChamadosPage() {
                           </Button>
                         )}
 
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          title="Excluir Chamado"
+                          className="h-9 px-3 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTicket(ticket);
+                          }}
+                        >
+                          Excluir
+                        </Button>
+
                         {ticket.status === 'Em Andamento' ? (
                           <Button 
                             variant="destructive" 
                             size="sm" 
-                            className="h-8"
+                            className="h-9 px-4 font-medium"
                             onClick={(e) => {
                               e.stopPropagation();
                               setTicketToFinalize(ticket);
@@ -835,7 +860,7 @@ function ChamadosPage() {
                             Finalizar
                           </Button>
                         ) : (
-                          <Button variant="ghost" size="sm" className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10">
+                          <Button variant="ghost" size="sm" className="h-9 px-3 text-primary font-medium hover:text-primary hover:bg-primary/10">
                             Detalhes
                           </Button>
                         )}
