@@ -44,6 +44,21 @@ function ActiveTimer({ startTime }: { startTime: string }) {
 
 import { useStore } from "@/lib/store";
 
+function calculateDuration(dInicio?: string, hInicio?: string, dFim?: string, hFim?: string) {
+  if (!dInicio || !hInicio || !hFim) return null;
+  const endD = dFim || dInicio;
+  const start = new Date(`${dInicio}T${hInicio.length === 5 ? hInicio + ':00' : hInicio}`);
+  const end = new Date(`${endD}T${hFim.length === 5 ? hFim + ':00' : hFim}`);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+  const diffMs = end.getTime() - start.getTime();
+  if (diffMs < 0) return null;
+  const diffMins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(diffMins / 60);
+  const mins = diffMins % 60;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+}
+
 function ChamadosPage() {
   const navigate = useNavigate();
   const { auth } = useStore();
@@ -802,6 +817,10 @@ function ChamadosPage() {
                           <span className="text-sm text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1.5">
                             <Clock className="w-4 h-4 text-muted-foreground" />
                             {ticket.hora_inicio ? ticket.hora_inicio.substring(0,5) : '?'} - {ticket.hora_fim ? ticket.hora_fim.substring(0,5) : '?'}
+                            {ticket.hora_inicio && ticket.hora_fim && (() => {
+                              const dur = calculateDuration(ticket.data_inicio, ticket.hora_inicio, ticket.data_fim, ticket.hora_fim);
+                              return dur ? <span className="text-xs text-muted-foreground font-normal ml-1">({dur})</span> : null;
+                            })()}
                           </span>
                         )}
                         {ticket.imagens && ticket.imagens.length > 0 && (
@@ -949,6 +968,25 @@ function ChamadosPage() {
                   <div>
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Prioridade</h4>
                     <p className={`text-sm font-medium ${getPriorityColor(viewTicket.prioridade)}`}>{viewTicket.prioridade}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Responsável (Atendimento)</h4>
+                    <p className="text-sm font-medium">{viewTicket.responsavel || "Não atribuído"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Horário & Duração</h4>
+                    <p className="text-sm flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                      {viewTicket.hora_inicio ? viewTicket.hora_inicio.substring(0,5) : '--:--'} às {viewTicket.hora_fim ? viewTicket.hora_fim.substring(0,5) : '--:--'}
+                      {viewTicket.hora_inicio && viewTicket.hora_fim && (
+                        <span className="text-xs bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded font-medium ml-1">
+                          {calculateDuration(viewTicket.data_inicio, viewTicket.hora_inicio, viewTicket.data_fim, viewTicket.hora_fim) || "0m"}
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </div>
 
