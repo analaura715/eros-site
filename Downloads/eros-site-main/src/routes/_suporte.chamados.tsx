@@ -327,7 +327,7 @@ function ChamadosPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)]">
-      <div className="flex items-center justify-between p-6 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 pb-4 gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <LifeBuoy className="w-6 h-6 text-primary" />
@@ -335,7 +335,7 @@ function ChamadosPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Gerencie os tickets de suporte e atendimento ao cliente.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col xs:flex-row items-stretch sm:items-center gap-3">
           {/* Modal 1: Iniciar Atendimento */}
           <Dialog open={openNew} onOpenChange={setOpenNew}>
             <DialogTrigger asChild>
@@ -557,7 +557,7 @@ function ChamadosPage() {
                         <h3 className="text-sm font-semibold">2. Classificação</h3>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="type">Tipo de Ticket</Label>
                           <Select value={newType} onValueChange={(v: any) => setNewType(v)}>
@@ -641,19 +641,19 @@ function ChamadosPage() {
       </div>
 
       <div className="px-6 pb-2">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
+          <div className="relative flex-1 w-full md:max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Buscar por ID, título ou cliente..."
-              className="pl-9 bg-background"
+              className="pl-9 bg-background w-full"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
             <Popover>
               <PopoverTrigger asChild>
                 <Button

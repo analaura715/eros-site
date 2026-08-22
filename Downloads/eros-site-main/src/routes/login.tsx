@@ -136,7 +136,7 @@ function LoginPage() {
             Tenha o melhor do CRM comercial, gerencie processos internos, organize o setor financeiro e acompanhe rotinas de suporte e marketing em uma única plataforma criada para a máxima performance.
           </p>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
               "Gestão CRM (Comercial)",
               "Processos Internos",

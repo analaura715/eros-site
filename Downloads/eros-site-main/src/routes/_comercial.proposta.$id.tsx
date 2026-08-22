@@ -145,7 +145,7 @@ function PropostaDocumento() {
   const renderClientDataBlock = (key: string) => (
     <section key={key} className="mb-8 bg-slate-50 p-4 rounded-lg border border-slate-100 print:break-inside-avoid">
       <h2 className="text-[10px] font-bold uppercase tracking-wider text-indigo-800 mb-3 border-b border-indigo-100 pb-2">Preparado Especialmente Para</h2>
-      <div className="grid grid-cols-2 gap-4 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
         <div>
           <p className="text-slate-500 mb-0.5">Empresa</p>
           <p className="font-bold text-slate-900 text-sm">{diagnostico.razao_social || diagnostico.lead_nome}</p>
@@ -296,7 +296,7 @@ function PropostaDocumento() {
 
   const renderSignaturesBlock = (key: string) => (
     <section key={key} className="mt-16 pt-8 border-t-2 border-slate-200 print:break-inside-avoid">
-      <div className="grid grid-cols-2 gap-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
         <div className="text-center">
           <div className="border-t border-slate-400 pt-2 font-semibold text-slate-700">Representante Comercial</div>
           <div className="text-sm text-slate-500">Eros Sistemas</div>

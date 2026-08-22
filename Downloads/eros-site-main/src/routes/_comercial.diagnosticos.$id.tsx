@@ -369,7 +369,7 @@ function DiagnosticoDetailComponent() {
                         <Label className="text-indigo-200 text-xs uppercase">Nome do Plano</Label>
                         <Input type="text" value={manualPlanoNome} onChange={e => setManualPlanoNome(e.target.value)} className="bg-white text-indigo-900 border-0 font-bold h-10" />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <Label className="text-indigo-200 text-xs uppercase">Mensalidade Base</Label>
                           <Input type="number" value={manualMensalidade || ''} onChange={e => setManualMensalidade(Number(e.target.value))} className="bg-white text-indigo-900 border-0 font-bold h-10" />

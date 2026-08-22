@@ -140,7 +140,7 @@ function DiagnosticosPage() {
 
       <div className="px-6 flex-1 overflow-y-auto">
         <Tabs defaultValue="diagnosticos" className="w-full h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-6 max-w-5xl mb-6">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 max-w-5xl mb-6 h-auto gap-1">
             <TabsTrigger value="diagnosticos" className="gap-2"><FileText className="w-4 h-4"/> Diagnósticos</TabsTrigger>
             <TabsTrigger value="avulso" className="gap-2"><Calculator className="w-4 h-4"/> Orçamentos</TabsTrigger>
             <TabsTrigger value="contratos" className="gap-2"><FileSignature className="w-4 h-4"/> Contratos</TabsTrigger>
@@ -150,10 +150,10 @@ function DiagnosticosPage() {
           </TabsList>
 
           <TabsContent value="diagnosticos" className="space-y-4 flex-1">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 flex-1 max-w-sm relative">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-2 flex-1 w-full sm:max-w-sm relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input type="search" placeholder="Buscar por Empresa..." className="pl-9 bg-background" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Input type="search" placeholder="Buscar por Empresa..." className="pl-9 bg-background w-full" value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
               
               <Dialog open={isDialogOpen} onOpenChange={open => { setIsDialogOpen(open); if(!open) setGeneratedLink(""); }}>

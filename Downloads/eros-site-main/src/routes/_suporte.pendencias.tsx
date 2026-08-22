@@ -272,7 +272,7 @@ function PendenciasPage() {
                   <Label>Título / Assunto (Obrigatório)</Label>
                   <Input required value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Ex: Desenvolver tela de dashboard financeiro" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Categoria</Label>
                     <Select value={newCategory} onValueChange={(v: any) => setNewCategory(v)}>
@@ -308,7 +308,7 @@ function PendenciasPage() {
               {/* 2. Prazos e Responsáveis */}
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-4">
                 <h3 className="font-semibold text-sm text-slate-800 border-b pb-2">2. Prazos e Responsáveis</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
                     <Label>Data de Início</Label>
                     <Input type="date" value={newDateStart} onChange={e => setNewDateStart(e.target.value)} />
@@ -326,7 +326,7 @@ function PendenciasPage() {
                     <Input type="time" value={newTimeEnd} onChange={e => setNewTimeEnd(e.target.value)} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Responsável pela Tarefa</Label>
                     <Input value={newAssignee} onChange={e => setNewAssignee(e.target.value)} placeholder="Ex: João Silva" />
@@ -341,7 +341,7 @@ function PendenciasPage() {
               {/* 3. Relacionamento e Anexos */}
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-4">
                 <h3 className="font-semibold text-sm text-slate-800 border-b pb-2">3. Cliente, Observações e Evidências</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2 flex flex-col mt-1">
                     <Label>Cliente que Pediu (Opcional)</Label>
                     <Popover open={openClientCombobox} onOpenChange={setOpenClientCombobox}>
@@ -429,7 +429,7 @@ function PendenciasPage() {
                   </div>
                   
                   {newFiles.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                       {newFiles.map((file, index) => (
                         <div key={index} className="flex items-center justify-between bg-white border rounded p-2 text-xs">
                           <span className="truncate max-w-[200px]">{file.name}</span>

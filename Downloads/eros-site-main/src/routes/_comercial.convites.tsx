@@ -663,7 +663,7 @@ function ConvitesPage() {
 
               <Separator />
 
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">E-mail</div>
                   <div className="font-medium break-all">{viewUser.email}</div>
@@ -876,7 +876,7 @@ function ConvitesPage() {
               </div>
 
               {/* Botões de copiar */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Button
                   variant="outline"
                   className="gap-2"
