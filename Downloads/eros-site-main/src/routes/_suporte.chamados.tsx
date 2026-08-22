@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Filter, MessageSquare, AlertCircle, CheckCircle2, Clock, LifeBuoy, Tag, Calendar as CalendarIcon, User, Briefcase, Bug, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Filter, MessageSquare, AlertCircle, CheckCircle2, Clock, LifeBuoy, Tag, Calendar as CalendarIcon, User, Briefcase, Bug, ChevronsUpDown, FileText } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +70,8 @@ function ChamadosPage() {
   const [filterPeriod, setFilterPeriod] = useState<DateRange | undefined>();
   const [openNew, setOpenNew] = useState(false);
   const [openClientCombobox, setOpenClientCombobox] = useState(false);
+  const [viewTicket, setViewTicket] = useState<Ticket | null>(null);
+  const [openView, setOpenView] = useState(false);
 
   const loadData = async () => {
     const data = await fetchChamados();
@@ -737,7 +739,14 @@ function ChamadosPage() {
                 </TableRow>
               ) : (
                 filteredTickets.map((ticket) => (
-                  <TableRow key={ticket.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <TableRow 
+                    key={ticket.id} 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      setViewTicket(ticket);
+                      setOpenView(true);
+                    }}
+                  >
                     
                     {/* ID */}
                     <TableCell className="align-top py-4">
@@ -861,7 +870,16 @@ function ChamadosPage() {
                             Finalizar
                           </Button>
                         ) : (
-                          <Button variant="ghost" size="sm" className="h-9 px-3 text-primary font-medium hover:text-primary hover:bg-primary/10">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-9 px-3 text-primary font-medium hover:text-primary hover:bg-primary/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewTicket(ticket);
+                              setOpenView(true);
+                            }}
+                          >
                             Detalhes
                           </Button>
                         )}
@@ -882,6 +900,120 @@ function ChamadosPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal Visualização de Detalhes */}
+      <Dialog open={openView} onOpenChange={setOpenView}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <LifeBuoy className="w-5 h-5" /> Detalhes do Chamado CH-{viewTicket?.ticket_number}
+            </DialogTitle>
+            <DialogDescription>
+              Informações completas do chamado lançado.
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewTicket && (
+            <div className="space-y-6 mt-2">
+              <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-md border border-slate-100 dark:border-slate-800 space-y-4">
+                <div>
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Título</h4>
+                  <p className="font-semibold text-lg text-slate-800 dark:text-slate-200">{viewTicket.titulo}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Empresa</h4>
+                    <p className="text-sm font-medium">{viewTicket.empresa?.nome || "Sem empresa"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Contato / Solicitante</h4>
+                    <p className="text-sm">{viewTicket.contato_nome || "Não informado"}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Módulo</h4>
+                    <p className="text-sm">{viewTicket.modulo || "-"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Tipo</h4>
+                    <p className="text-sm">{viewTicket.tipo}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Status</h4>
+                    <p className="text-sm font-medium">{viewTicket.status}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Prioridade</h4>
+                    <p className={`text-sm font-medium ${getPriorityColor(viewTicket.prioridade)}`}>{viewTicket.prioridade}</p>
+                  </div>
+                </div>
+
+                {viewTicket.tags && viewTicket.tags.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {viewTicket.tags.map(tag => (
+                        <Badge key={tag} variant="secondary" className="font-normal text-xs">{tag}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {viewTicket.descricao && (
+                <div className="space-y-2 bg-slate-50/50 dark:bg-slate-900/20 p-4 rounded-md border border-slate-100 dark:border-slate-800">
+                  <h4 className="text-sm font-bold border-b pb-2 flex items-center gap-2"><MessageSquare className="w-4 h-4"/> Descrição do Problema</h4>
+                  <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300 pt-2">{viewTicket.descricao}</p>
+                </div>
+              )}
+
+              {viewTicket.solucao && (
+                <div className="space-y-2 bg-green-50/50 dark:bg-green-950/20 p-4 rounded-md border border-green-100 dark:border-green-900/30">
+                  <h4 className="text-sm font-bold border-b border-green-200/50 pb-2 text-green-700 dark:text-green-500 flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> Solução Aplicada</h4>
+                  <p className="whitespace-pre-wrap text-sm text-green-800 dark:text-green-400 pt-2">{viewTicket.solucao}</p>
+                </div>
+              )}
+
+              {viewTicket.imagens && viewTicket.imagens.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold border-b pb-2">Documentos e Imagens Anexadas ({viewTicket.imagens.length})</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {viewTicket.imagens.map((img, idx) => {
+                      const isPdf = img.toLowerCase().endsWith('.pdf');
+                      return (
+                        <a 
+                          key={idx} 
+                          href={img} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="group relative aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden border hover:border-primary transition-colors flex items-center justify-center shadow-sm"
+                        >
+                          {isPdf ? (
+                            <div className="flex flex-col items-center justify-center text-red-500">
+                              <FileText className="w-12 h-12 mb-2" />
+                              <span className="text-xs font-semibold text-slate-600">Documento PDF</span>
+                            </div>
+                          ) : (
+                            <img src={img} alt={`Anexo ${idx + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                          )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex flex-col items-center justify-center transition-colors">
+                            <Search className="text-white opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 drop-shadow-md mb-1" />
+                            <span className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity font-medium drop-shadow-md">Ampliar</span>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">Clique na imagem para abrir no tamanho original.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
