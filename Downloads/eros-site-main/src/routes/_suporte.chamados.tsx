@@ -88,7 +88,8 @@ function ChamadosPage() {
     
     // Inscreve para notificações
     const unsubscribe = subscribeToTicketNotifications((ticket) => {
-      toast.info(`${ticket.responsavel || 'Alguém'} iniciou um chamado para ${ticket.empresa_nome}`);
+      const contatoMsg = ticket.contato ? `do(a) funcionário(a) ${ticket.contato} da ` : 'da empresa ';
+      toast.info(`${ticket.responsavel || 'Alguém'} assumiu um chamado ${contatoMsg}${ticket.empresa_nome}`);
       loadData(); // Recarrega para mostrar na tabela
     });
 
