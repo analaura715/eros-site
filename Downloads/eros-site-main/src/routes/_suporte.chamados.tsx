@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Filter, MessageSquare, AlertCircle, CheckCircle2, Clock, LifeBuoy, Tag, Calendar as CalendarIcon, User, Briefcase, Bug, ChevronsUpDown, FileText } from "lucide-react";
+import { Plus, Search, Filter, MessageSquare, AlertCircle, CheckCircle2, Clock, LifeBuoy, Tag, Calendar as CalendarIcon, User, Briefcase, Bug, ChevronsUpDown, FileText, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,6 +72,7 @@ function ChamadosPage() {
   const [openClientCombobox, setOpenClientCombobox] = useState(false);
   const [viewTicket, setViewTicket] = useState<Ticket | null>(null);
   const [openView, setOpenView] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const loadData = async () => {
     const data = await fetchChamados();
@@ -987,9 +988,15 @@ function ChamadosPage() {
                         <a 
                           key={idx} 
                           href={img} 
+                          onClick={(e) => {
+                            if (!isPdf) {
+                              e.preventDefault();
+                              setPreviewImage(img);
+                            }
+                          }}
                           target="_blank" 
                           rel="noreferrer" 
-                          className="group relative aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden border hover:border-primary transition-colors flex items-center justify-center shadow-sm"
+                          className="group relative aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden border hover:border-primary transition-colors flex items-center justify-center shadow-sm cursor-pointer"
                         >
                           {isPdf ? (
                             <div className="flex flex-col items-center justify-center text-red-500">
@@ -1001,7 +1008,9 @@ function ChamadosPage() {
                           )}
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex flex-col items-center justify-center transition-colors">
                             <Search className="text-white opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 drop-shadow-md mb-1" />
-                            <span className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity font-medium drop-shadow-md">Ampliar</span>
+                            <span className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity font-medium drop-shadow-md">
+                              {isPdf ? 'Abrir PDF' : 'Ampliar'}
+                            </span>
                           </div>
                         </a>
                       );
@@ -1010,6 +1019,29 @@ function ChamadosPage() {
                   <p className="text-xs text-muted-foreground mt-2">Clique na imagem para abrir no tamanho original.</p>
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Visualização de Imagem Expandida */}
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-[90vw] w-fit p-1 bg-transparent border-none shadow-none flex justify-center items-center">
+          {previewImage && (
+            <div className="relative">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="absolute -top-3 -right-3 rounded-full bg-background z-10 w-8 h-8"
+                onClick={() => setPreviewImage(null)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+              <img 
+                src={previewImage} 
+                alt="Visualização expandida" 
+                className="max-w-[90vw] max-h-[85vh] object-contain rounded-md" 
+              />
             </div>
           )}
         </DialogContent>
