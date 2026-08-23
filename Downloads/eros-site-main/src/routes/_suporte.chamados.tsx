@@ -548,7 +548,17 @@ function ChamadosPage() {
                 </DialogDescription>
               </DialogHeader>
               
-              <form onSubmit={handleFinalize} className="space-y-6">
+              <form 
+                onSubmit={handleFinalize} 
+                className="space-y-6"
+                onPaste={(e) => {
+                  if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+                    const pastedFiles = Array.from(e.clipboardData.files);
+                    setNewFiles(prev => [...prev, ...pastedFiles]);
+                    toast.success(`${pastedFiles.length} arquivo(s) colado(s) com sucesso!`);
+                  }
+                }}
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Coluna Esquerda */}
                   <div className="space-y-6">
@@ -638,9 +648,50 @@ function ChamadosPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="files">Imagens / Anexos</Label>
-                        <Input id="files" type="file" multiple accept="image/*" onChange={e => { if (e.target.files) setNewFiles(Array.from(e.target.files)); }} />
-                        <p className="text-xs text-muted-foreground">Pressione Ctrl/Cmd para selecionar várias imagens.</p>
+                        <Label htmlFor="files">Imagens / Anexos <span className="text-muted-foreground font-normal ml-1">(Ctrl+V para colar)</span></Label>
+                        <div className="flex flex-col gap-2">
+                          <Input 
+                            id="files" 
+                            type="file" 
+                            multiple 
+                            accept="image/*,application/pdf" 
+                            onChange={e => { 
+                              if (e.target.files) {
+                                const files = Array.from(e.target.files);
+                                setNewFiles(prev => [...prev, ...files]);
+                                e.target.value = '';
+                              } 
+                            }} 
+                          />
+                          <p className="text-xs text-muted-foreground">Você pode colar imagens diretamente nesta tela usando Ctrl+V.</p>
+                          
+                          {newFiles.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2 p-2 border rounded-md bg-slate-50 dark:bg-slate-900">
+                              {newFiles.map((file, idx) => {
+                                const isImage = file.type.startsWith('image/');
+                                return (
+                                  <div key={idx} className="relative group w-20 h-20 border rounded-md overflow-hidden bg-white shadow-sm flex items-center justify-center">
+                                    {isImage ? (
+                                      <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="flex flex-col items-center justify-center text-slate-500">
+                                        <FileText className="w-6 h-6 mb-1" />
+                                        <span className="text-[10px] uppercase font-bold text-slate-400">DOC</span>
+                                      </div>
+                                    )}
+                                    <button 
+                                      type="button"
+                                      className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                      onClick={() => setNewFiles(prev => prev.filter((_, i) => i !== idx))}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Lightbulb, Users, Code, ShoppingBag, MoreHorizontal, CheckCircle2, Clock, Upload, Trash2, CalendarIcon, ChevronsUpDown } from "lucide-react";
+import { Plus, Lightbulb, Users, Code, ShoppingBag, MoreHorizontal, CheckCircle2, Clock, Upload, Trash2, CalendarIcon, ChevronsUpDown, FileText } from "lucide-react";
 import { Pendencia, CategoriaPendencia, StatusPendencia } from "@/types/suporte";
 import { toast } from "sonner";
 
@@ -263,7 +263,17 @@ function PendenciasPage() {
             <DialogHeader>
               <DialogTitle className="text-xl">Registrar Item no Backlog / Tarefa</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-6 mt-4">
+            <form 
+              onSubmit={handleCreate} 
+              className="space-y-6 mt-4"
+              onPaste={(e) => {
+                if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+                  const pastedFiles = Array.from(e.clipboardData.files);
+                  setNewFiles(prev => [...prev, ...pastedFiles]);
+                  toast.success(`${pastedFiles.length} arquivo(s) colado(s) com sucesso!`);
+                }
+              }}
+            >
               
               {/* 1. Identificação */}
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-4">
@@ -410,36 +420,58 @@ function PendenciasPage() {
                 </div>
                 
                 <div className="space-y-2 pt-2">
-                  <Label>Anexar Imagens ou Arquivos (Opcional)</Label>
-                  <div className="flex items-center gap-4">
-                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="shrink-0 bg-white hover:bg-slate-50">
-                      <Upload className="w-4 h-4 mr-2" /> Escolher Arquivos
-                    </Button>
-                    <input 
-                      type="file" 
-                      multiple 
-                      className="hidden" 
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept="image/*,.pdf,.doc,.docx"
-                    />
-                    <div className="text-xs text-muted-foreground">
-                      {newFiles.length} arquivo(s) selecionado(s)
+                  <Label>Anexar Imagens ou Arquivos (Opcional) <span className="text-muted-foreground font-normal ml-1">(Ctrl+V para colar)</span></Label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-4">
+                      <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="shrink-0 bg-white hover:bg-slate-50">
+                        <Upload className="w-4 h-4 mr-2" /> Escolher Arquivos
+                      </Button>
+                      <input 
+                        type="file" 
+                        multiple 
+                        className="hidden" 
+                        ref={fileInputRef}
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            const files = Array.from(e.target.files);
+                            setNewFiles(prev => [...prev, ...files]);
+                            e.target.value = '';
+                          }
+                        }}
+                        accept="image/*,.pdf,.doc,.docx"
+                      />
+                      <div className="text-xs text-muted-foreground">
+                        Você pode colar imagens com Ctrl+V.
+                      </div>
                     </div>
+                    
+                    {newFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2 p-2 border rounded-md bg-white">
+                        {newFiles.map((file, index) => {
+                          const isImage = file.type.startsWith('image/');
+                          return (
+                            <div key={index} className="relative group w-24 h-24 border rounded-md overflow-hidden bg-slate-50 shadow-sm flex items-center justify-center">
+                              {isImage ? (
+                                <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="flex flex-col items-center justify-center text-slate-500 p-2 text-center">
+                                  <FileText className="w-6 h-6 mb-1" />
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 truncate w-full">{file.name}</span>
+                                </div>
+                              )}
+                              <button 
+                                type="button"
+                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                onClick={() => handleRemoveFile(index)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  
-                  {newFiles.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                      {newFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between bg-white border rounded p-2 text-xs">
-                          <span className="truncate max-w-[200px]">{file.name}</span>
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleRemoveFile(index)}>
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
               
