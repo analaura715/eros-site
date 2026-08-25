@@ -20,11 +20,7 @@ import {
 import { useStore } from "@/lib/store";
 import { ProspectDialog } from "./prospect-dialog";
 import { MeetingDialog } from "./meeting-dialog";
-import { Bell } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { NotificationCenter } from "./notification-center";
 import {
   Command,
   CommandEmpty,
@@ -34,6 +30,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ChatDrawer } from "./chat-drawer";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { auth, logout, theme, toggleTheme, state } = useStore();
@@ -43,6 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [openMeeting, setOpenMeeting] = useState(false);
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const results = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -61,29 +59,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [search, state]);
 
-  useEffect(() => {
-    if (!auth) return;
-    
-    const channel = supabase
-      .channel('public:tickets:appshell')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'tickets' },
-        (payload) => {
-          if (payload.new && payload.new.status === 'Em Andamento') {
-            toast.info(`Novo chamado iniciado!`, {
-              description: `O usuário ${payload.new.responsavel || 'Alguém'} iniciou um chamado para ${payload.new.empresa_nome || 'um cliente'}.`,
-              duration: 8000,
-            });
-          }
-        }
-      )
-      .subscribe();
+  // Canais Realtime movidos para NotificationCenter
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [auth]);
 
   const title =
     pathname.startsWith("/dashboard") ? "Dashboard" :
@@ -108,14 +85,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <SidebarTrigger />
             <div className="hidden md:block text-sm font-semibold">{title}</div>
             <div className="ml-auto flex items-center gap-2">
-              <Button variant="ghost" size="icon" aria-label="Chat">
+              <NotificationCenter onOpenChat={() => setChatOpen(true)} />
+              <Button variant="ghost" size="icon" aria-label="Chat" onClick={() => setChatOpen(true)}>
                 <MessageSquare className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <Link to="/configuracoes">
-                  <Settings className="h-4 w-4" />
-                </Link>
-              </Button>
+              <ThemeSwitcher />
               <Button size="icon" variant="ghost" onClick={toggleTheme} aria-label="Alternar tema">
                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
@@ -200,6 +174,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Command>
         </DialogContent>
       </Dialog>
+      <ChatDrawer open={chatOpen} onOpenChange={setChatOpen} />
     </SidebarProvider>
   );
 }

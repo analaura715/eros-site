@@ -102,13 +102,15 @@ function LoginPage() {
         ? "Acesso Negado: E-mail ou senha incorretos." 
         : err.message || "Erro ao tentar fazer login.";
       toast.error(errorMessage);
+      setEmail("");
+      setPassword("");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full min-h-screen flex font-sans bg-[#F7F8FA]">
+    <div className="w-full min-h-[100dvh] flex font-sans bg-[#F7F8FA]">
       
       {/* Lado Esquerdo - Imersão Visual com Degradê de Cores e Logo Destacada */}
       <div className="hidden lg:flex w-1/2 relative bg-gradient-to-br from-[#060D27] via-[#0D1B4C] via-60% to-[#043343] flex-col justify-between p-14 overflow-hidden">
@@ -170,10 +172,10 @@ function LoginPage() {
       </div>
 
       {/* Lado Direito - Card de Login (Branco/Clean) */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative bg-[#F7F8FA]">
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-4 py-8 sm:p-12 relative bg-[#F7F8FA] overflow-y-auto">
         
         <div 
-          className="w-full max-w-[440px] bg-white rounded-[24px] p-8 sm:p-10 shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-gray-100"
+          className="w-full max-w-[440px] bg-white rounded-[24px] p-6 sm:p-10 shadow-lg border border-gray-100 my-auto"
           style={{
             opacity: mounted ? 1 : 0,
             transform: mounted ? 'translateY(0)' : 'translateY(20px)',

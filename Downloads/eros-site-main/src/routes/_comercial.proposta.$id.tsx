@@ -92,7 +92,9 @@ function PropostaDocumento() {
   const valorTotal = isManual ? (Number(search.plano_valor) || Number(search.mensalidade) || 0) : 0;
   const descontoBase = isManual ? (Number(search.desconto) || 0) : 0;
   const valorFinal = Math.max(0, valorTotal - descontoBase);
-  const valorSetupExibicao = 0; // Fixed for now
+  
+  const urlSetupParcelas = isManual ? (Number(search.setup_parcelas) || 1) : 1;
+  const valorSetupExibicao = isManual ? (Number(search.setup) || 0) : urlSetup;
 
   const modulosSelecionados = diagnostico?.modulos_selecionados || [];
   const modulos = catalogoModulos.filter(m => modulosSelecionados.includes(m.id));
@@ -101,13 +103,21 @@ function PropostaDocumento() {
     window.print();
   };
 
+  const formatCurrency = (val: number) => {
+    return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const builder = configOrcamento?.formulario_builder || {};
   const textos = builder.textos_proposta || {};
   const templateProposta = builder.template_proposta;
   
   const textoIntroducao = textos.introducao || "Agradecemos a oportunidade de apresentar nossa proposta comercial...";
-  const textoCenario = textos.conhecimento_negocio || "O setor exige controle rigoroso...";
+  let textoCenario = textos.conhecimento_negocio || "O setor exige controle rigoroso...";
   const textoSetup = textos.sobre_implantacao || "A Taxa de Implantação é um investimento único...";
+
+  if (diagnostico?.razao_social?.toUpperCase().includes('PS COMERCIO') || diagnostico?.razao_social?.toUpperCase().includes('PS COMÉRCIO')) {
+    textoCenario = "A PS Comércio de Frutas LTDA necessita de uma solução integrada para controle de toda a esteira do negócio, desde a Entrada do Produtor até o faturamento e conciliação financeira. O escopo mapeado inclui a gestão de entrada de mercadoria, financeiro geral, conciliação bancária automatizada, emissão de nota fiscal, geração de boletos e um painel de relatórios gerenciais para acompanhamento em tempo real das operações.";
+  }
 
   const parseVariables = (text: string) => {
     let t = text || '';
@@ -148,12 +158,12 @@ function PropostaDocumento() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
         <div>
           <p className="text-slate-500 mb-0.5">Empresa</p>
-          <p className="font-bold text-slate-900 text-sm">{diagnostico.razao_social || diagnostico.lead_nome}</p>
+          <p className="font-bold text-slate-900 text-sm">{(diagnostico.razao_social || diagnostico.lead_nome).replace('PS COMERCIO', 'PS COMÉRCIO').replace('PS Comercio', 'PS Comércio')}</p>
           {diagnostico.cnpj && <p className="text-slate-600 mt-0.5">CNPJ: {diagnostico.cnpj}</p>}
         </div>
         <div>
           <p className="text-slate-500 mb-1">Localização e Contato</p>
-          {diagnostico.cidade_uf && <p className="text-slate-700 flex items-center gap-1"><MapPin className="w-3 h-3"/> {diagnostico.cidade_uf}</p>}
+          {diagnostico.cidade_uf && <p className="text-slate-700 flex items-center gap-1"><MapPin className="w-3 h-3"/> {diagnostico.cidade_uf.replace('TAIUVA', 'TAIÚVA').replace('Taiuva', 'Taiúva')}</p>}
           {diagnostico.telefone_whatsapp && <p className="text-slate-700 flex items-center gap-1"><Phone className="w-3 h-3"/> {diagnostico.telefone_whatsapp}</p>}
         </div>
       </div>
@@ -178,40 +188,67 @@ function PropostaDocumento() {
           {modulos.some((m: any) => m.nome.toUpperCase().includes('ENTRADA DE PRODUTOR')) && (
             <>
               <h3 className="font-semibold text-slate-800 mb-2 uppercase tracking-wider text-xs">Entrada de Produtor</h3>
-              <ul className="list-disc pl-5 space-y-1 mb-4">
-                <li>Controle de Entrada de produtor lote semanal</li>
-                <li>Emissão de Vale de entrega e Romaneio</li>
+              <ul className="space-y-1 mb-4">
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Controle de Entrada de produtor lote semanal</li>
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Emissão de Vale de entrega e Romaneio</li>
               </ul>
             </>
           )}
           <h3 className="font-semibold text-slate-800 mb-2 uppercase tracking-wider text-xs">Vendas e Orçamentos</h3>
-          <ul className="list-disc pl-5 space-y-1 mb-4">
-            <li>Emissão de orçamentos e pedidos de venda</li>
-            <li>Formação de carga e romaneio de entrega</li>
+          <ul className="space-y-1 mb-4">
+            <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Emissão de orçamentos e pedidos de venda</li>
+            <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Formação de carga e romaneio de entrega</li>
           </ul>
-          {modulos.some((m: any) => m.nome.toUpperCase().includes('NOTA FISCAL') || m.nome.toUpperCase().includes('MDFE')) && (
+          {modulos.some((m: any) => m.nome.toUpperCase().includes('NOTA FISCAL') || m.nome.toUpperCase().includes('MDFE')) || diagnostico?.razao_social?.toUpperCase().includes('PS COMERCIO') || diagnostico?.razao_social?.toUpperCase().includes('PS COMÉRCIO') ? (
             <>
               <h3 className="font-semibold text-slate-800 mb-2 uppercase tracking-wider text-xs">Módulos Fiscais</h3>
-              <ul className="list-disc pl-5 space-y-1 mb-4">
-                <li>Emissão de NF-e conforme legislação vigente</li>
-                <li>Arquivamento digital seguro</li>
+              <ul className="space-y-1 mb-4">
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Emissão de NF-e conforme legislação vigente</li>
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Arquivamento digital seguro</li>
               </ul>
             </>
-          )}
+          ) : null}
+          {(modulos.some((m: any) => m.nome.toUpperCase().includes('RELATORIO') || m.nome.toUpperCase().includes('PAINEL')) || diagnostico?.razao_social?.toUpperCase().includes('PS COMERCIO') || diagnostico?.razao_social?.toUpperCase().includes('PS COMÉRCIO')) ? (
+            <>
+              <h3 className="font-semibold text-slate-800 mb-2 uppercase tracking-wider text-xs">Painel de Relatórios</h3>
+              <ul className="space-y-1 mb-4">
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Visão gerencial consolidada do negócio</li>
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Métricas de vendas e entradas em tempo real</li>
+              </ul>
+            </>
+          ) : null}
         </div>
         <div>
-          {modulos.some((m: any) => ['FINANCEIRO GERAL', 'CONTAS A PAGAR', 'CONTAS A RECEBER'].includes(m.nome.toUpperCase())) && (
+          {(modulos.some((m: any) => ['FINANCEIRO GERAL', 'CONTAS A PAGAR', 'CONTAS A RECEBER'].includes(m.nome.toUpperCase())) || diagnostico?.razao_social?.toUpperCase().includes('PS COMERCIO') || diagnostico?.razao_social?.toUpperCase().includes('PS COMÉRCIO')) ? (
             <>
-              <h3 className="font-semibold text-slate-800 mb-2 uppercase tracking-wider text-xs">Financeiro</h3>
-              <ul className="list-disc pl-5 space-y-1 mb-4">
-                <li>Controle completo do fluxo de caixa</li>
-                <li>Contas a pagar e a receber</li>
+              <h3 className="font-semibold text-slate-800 mb-2 uppercase tracking-wider text-xs">Financeiro Geral</h3>
+              <ul className="space-y-1 mb-4">
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Controle completo do fluxo de caixa</li>
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Contas a pagar e a receber</li>
               </ul>
             </>
-          )}
+          ) : null}
+          {(modulos.some((m: any) => m.nome.toUpperCase().includes('CONCILIACAO') || m.nome.toUpperCase().includes('CONCILIAÇÃO')) || diagnostico?.razao_social?.toUpperCase().includes('PS COMERCIO') || diagnostico?.razao_social?.toUpperCase().includes('PS COMÉRCIO')) ? (
+            <>
+              <h3 className="font-semibold text-slate-800 mb-2 uppercase tracking-wider text-xs">Conciliação Bancária</h3>
+              <ul className="space-y-1 mb-4">
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Conciliação automatizada de extratos</li>
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Redução de erros e trabalho manual</li>
+              </ul>
+            </>
+          ) : null}
+          {(modulos.some((m: any) => m.nome.toUpperCase().includes('BOLETO')) || diagnostico?.razao_social?.toUpperCase().includes('PS COMERCIO') || diagnostico?.razao_social?.toUpperCase().includes('PS COMÉRCIO')) ? (
+            <>
+              <h3 className="font-semibold text-slate-800 mb-2 uppercase tracking-wider text-xs">Geração de Boletos</h3>
+              <ul className="space-y-1 mb-4">
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Emissão direta pelo sistema</li>
+                <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Gestão eficiente de recebimentos</li>
+              </ul>
+            </>
+          ) : null}
           <h3 className="font-semibold text-slate-800 mb-2 uppercase tracking-wider text-xs">Telas Simples e Práticas</h3>
-          <ul className="list-disc pl-5 space-y-1 mb-4">
-            <li>Interface intuitiva, organizada e de fácil aprendizado</li>
+          <ul className="space-y-1 mb-4">
+            <li className="flex items-start gap-2"><span className="text-indigo-400 font-bold">•</span> Interface intuitiva, organizada e de fácil aprendizado</li>
           </ul>
         </div>
       </div>
@@ -235,13 +272,13 @@ function PropostaDocumento() {
               <tr className="border-b border-slate-100">
                 <td className="py-3 text-slate-600 font-medium text-lg">{urlPlanoNome}: Mensalidade</td>
                 <td className="py-3 text-center text-slate-600">Recorrente</td>
-                <td className="py-3 text-right text-slate-800 font-bold text-lg">R$ {urlPlanoValor.toFixed(2).replace('.', ',')}</td>
+                <td className="py-3 text-right text-slate-800 font-bold text-lg">R$ {formatCurrency(urlPlanoValor)}</td>
               </tr>
               {urlDesconto > 0 && (
                 <tr className="border-b border-slate-100 bg-emerald-50/50">
                   <td className="py-3 text-emerald-700 font-medium pl-4">Desconto Especial Aplicado</td>
                   <td className="py-3 text-center text-emerald-700">Mensal</td>
-                  <td className="py-3 text-right text-emerald-700 font-medium">- R$ {urlDesconto.toFixed(2).replace('.', ',')}</td>
+                  <td className="py-3 text-right text-emerald-700 font-medium">- R$ {formatCurrency(urlDesconto)}</td>
                 </tr>
               )}
             </>
@@ -249,7 +286,17 @@ function PropostaDocumento() {
             <tr className="border-b border-slate-100">
               <td className="py-3 text-slate-600">Plano Professional: Mensalidade</td>
               <td className="py-3 text-center text-slate-600">Recorrente</td>
-              <td className="py-3 text-right text-slate-800 font-medium">R$ {valorFinal.toFixed(2).replace('.', ',')} / mês</td>
+              <td className="py-3 text-right text-slate-800 font-medium">R$ {formatCurrency(valorFinal)} / mês</td>
+            </tr>
+          )}
+          
+          {valorSetupExibicao > 0 && (
+            <tr className="border-b border-slate-100 bg-slate-50">
+              <td className="py-3 text-slate-700 font-medium">Taxa de Implantação (Setup)</td>
+              <td className="py-3 text-center text-slate-600">
+                {urlSetupParcelas > 1 ? `${urlSetupParcelas}x de R$ ${formatCurrency(valorSetupExibicao / urlSetupParcelas)}` : 'À Vista'}
+              </td>
+              <td className="py-3 text-right text-slate-800 font-bold">R$ {formatCurrency(valorSetupExibicao)}</td>
             </tr>
           )}
         </tbody>
@@ -257,7 +304,7 @@ function PropostaDocumento() {
       <div className="bg-slate-800 text-white p-6 rounded-lg flex justify-center items-center print:border print:border-slate-800 mt-6">
         <div className="text-center">
           <p className="text-slate-300 text-xs uppercase tracking-wider font-bold mb-1">Mensalidade Final</p>
-          <p className="text-3xl font-black text-emerald-400">R$ {valorFinal.toFixed(2).replace('.', ',')} <span className="text-sm font-normal text-slate-400">/mês</span></p>
+          <p className="text-3xl font-black text-emerald-400">R$ {formatCurrency(valorFinal)} <span className="text-sm font-normal text-slate-400">/mês</span></p>
         </div>
       </div>
     </section>

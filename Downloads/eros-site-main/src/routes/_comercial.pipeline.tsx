@@ -7,26 +7,28 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { ConvertLeadDialog } from '@/components/convert-lead-dialog';
 
 export const Route = createFileRoute('/_comercial/pipeline')({
   component: PipelineComponent,
 });
 
 const PIPELINE_COLUMNS = [
-  { id: 'Em observação', title: 'Em Observação', color: 'bg-slate-500' },
   { id: 'Prospectada', title: 'Prospectada', color: 'bg-indigo-500' },
   { id: 'Entrar em contato', title: 'Entrar em Contato', color: 'bg-amber-500' },
   { id: 'Em contato', title: 'Em Contato', color: 'bg-orange-500' },
-  { id: 'Reunião agendada', title: 'Reunião Agendada', color: 'bg-teal-500' },
-  { id: 'Em negociação', title: 'Em Negociação', color: 'bg-purple-500' },
-  { id: 'Proposta enviada', title: 'Proposta Enviada', color: 'bg-blue-500' },
-  { id: 'Sem interesse', title: 'Sem Interesse', color: 'bg-red-500' },
-  { id: 'Sem resposta', title: 'Sem Resposta', color: 'bg-gray-400' },
+  { id: 'Reunião agendada', title: 'Agendamento', color: 'bg-teal-500' },
+  { id: 'Visita', title: 'Visita', color: 'bg-pink-500' },
+  { id: 'Proposta enviada', title: 'Proposta', color: 'bg-blue-500' },
+  { id: 'Em negociação', title: 'Negociação', color: 'bg-purple-500' }
 ];
 
 function PipelineComponent() {
   const [leads, setLeads] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
+  const [leadToConvert, setLeadToConvert] = useState<any>(null);
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -70,6 +72,18 @@ function PipelineComponent() {
       )
     );
 
+    // Se moveu para Prospectada, sugerir conversão
+    if (newStatus === 'Prospectada') {
+      const fullLead = prevLeads.find(l => l.id === leadId);
+      if (fullLead && confirm('Este lead foi para a etapa "Prospectada". Deseja convertê-lo em Empresa e iniciar a implantação agora?')) {
+        setLeadToConvert(fullLead);
+        setIsConvertModalOpen(true);
+        // Atualiza no banco para Prospectada de qualquer forma (ou será atualizado para Convertido pelo modal)
+        await supabase.from('leads').update({ status: newStatus }).eq('id', leadId);
+        return;
+      }
+    }
+
     // Atualiza no banco
     const { error } = await supabase
       .from('leads')
@@ -102,7 +116,7 @@ function PipelineComponent() {
               const totalReceita = colLeads.reduce((acc, curr) => acc + (Number(curr.receita_potencial) || 0), 0);
 
               return (
-                <div key={col.id} className="flex flex-col min-w-[320px] max-w-[320px] bg-muted/30 rounded-xl border shrink-0 h-full overflow-hidden">
+                <div key={col.id} className="flex flex-col min-w-[280px] max-w-[280px] bg-muted/30 rounded-xl border shrink-0 h-full overflow-hidden">
                   <div className="p-4 flex flex-col gap-2 border-b bg-card shrink-0 shadow-sm z-10">
                     <div className="flex items-center justify-between font-semibold">
                       <div className="flex items-center gap-2">
@@ -186,6 +200,13 @@ function PipelineComponent() {
           </div>
         </DragDropContext>
       </div>
+
+      <ConvertLeadDialog 
+        open={isConvertModalOpen} 
+        onOpenChange={setIsConvertModalOpen} 
+        lead={leadToConvert} 
+        onSuccess={fetchLeads} 
+      />
     </div>
   );
 }

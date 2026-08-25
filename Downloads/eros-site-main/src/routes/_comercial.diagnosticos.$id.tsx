@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute('/_comercial/diagnosticos/$id')({
   component: DiagnosticoDetailComponent,
@@ -32,6 +33,7 @@ function DiagnosticoDetailComponent() {
   const [isManual, setIsManual] = useState(false);
   const [manualMensalidade, setManualMensalidade] = useState<number>(0);
   const [manualSetup, setManualSetup] = useState<number>(0);
+  const [manualSetupParcelas, setManualSetupParcelas] = useState<string>('1');
   const [manualPlanoNome, setManualPlanoNome] = useState('Plano Professional');
   const [manualDescontoPersonalizado, setManualDescontoPersonalizado] = useState<number>(0);
 
@@ -379,9 +381,27 @@ function DiagnosticoDetailComponent() {
                           <Input type="number" value={manualDescontoPersonalizado || ''} onChange={e => setManualDescontoPersonalizado(Number(e.target.value))} className="bg-white text-indigo-900 border-0 font-bold h-10" />
                         </div>
                       </div>
-                      <div className="space-y-1">
-                          <Label className="text-indigo-200 text-xs uppercase">Implantação (R$)</Label>
-                          <Input type="number" value={manualSetup || ''} onChange={e => setManualSetup(Number(e.target.value))} className="bg-white text-indigo-900 border-0 font-bold h-10" />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <Label className="text-indigo-200 text-xs uppercase">Implantação (R$)</Label>
+                            <Input type="number" value={manualSetup || ''} onChange={e => setManualSetup(Number(e.target.value))} className="bg-white text-indigo-900 border-0 font-bold h-10" />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-indigo-200 text-xs uppercase">Parcelas</Label>
+                            <Select value={manualSetupParcelas} onValueChange={setManualSetupParcelas}>
+                              <SelectTrigger className="w-full bg-white h-10 border-0 text-indigo-900 font-bold">
+                                <SelectValue placeholder="Parcelas" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1x (À Vista)</SelectItem>
+                                <SelectItem value="2">2x</SelectItem>
+                                <SelectItem value="3">3x</SelectItem>
+                                <SelectItem value="4">4x</SelectItem>
+                                <SelectItem value="5">5x</SelectItem>
+                                <SelectItem value="6">6x</SelectItem>
+                              </SelectContent>
+                            </Select>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -396,7 +416,8 @@ function DiagnosticoDetailComponent() {
                       plano_nome: isManual ? manualPlanoNome : 'Plano Professional',
                       plano_valor: isManual ? manualMensalidade : valorTotalMensal,
                       desconto: isManual ? manualDescontoPersonalizado : descontoMensalidade,
-                      desconto_setup: isManual ? 0 : descontoImplantacao
+                      desconto_setup: isManual ? 0 : descontoImplantacao,
+                      setup_parcelas: isManual ? manualSetupParcelas : '1'
                     }}
                     className="mt-6"
                   >

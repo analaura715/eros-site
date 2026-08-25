@@ -179,12 +179,10 @@ function RegisterPage() {
         >
           {/* Header do Card */}
           <div className="flex flex-col mb-8">
-            <img 
-              src="/logo.png" 
-              alt="Venux Logo" 
-              className="h-12 w-auto object-contain self-start mb-6" 
-              onError={(e) => { e.currentTarget.style.display = 'none' }} 
-            />
+            <div className="flex items-center gap-2.5 mb-6">
+              <VenuxLogo className="h-9 w-9" />
+              <span className="text-2xl font-bold tracking-tight text-[#0a1128]">venux</span>
+            </div>
             <h2 className="text-2xl font-bold tracking-tight text-gray-900 mb-2">
               Criar sua conta
             </h2>

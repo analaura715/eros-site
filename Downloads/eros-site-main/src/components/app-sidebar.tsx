@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { VenuxLogo } from "@/components/venux-logo";
-import { LayoutDashboard, Users, CalendarDays, Building2, Contact, Target, KanbanSquare, ListTodo, FileText, BarChart3, BarChart, Settings, LifeBuoy } from "lucide-react";
+import { LayoutDashboard, Users, CalendarDays, Building2, Contact, Target, KanbanSquare, ListTodo, FileText, BarChart3, BarChart, Settings, LifeBuoy, Calculator } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,17 +25,28 @@ export function AppSidebar() {
   const role = auth?.role || "Padrão";
 
   // Lógica de Permissões (RBAC) e Módulos
-  const isSupportModule = pathname.startsWith("/chamados") || pathname.startsWith("/suporte") || pathname.startsWith("/clientes") || pathname.startsWith("/rotinas") || pathname.startsWith("/ajustes") || pathname.startsWith("/painel") || pathname.startsWith("/metricas") || pathname.startsWith("/pendencias") || pathname.startsWith("/cadastros");
+  const isSupportModule = pathname.startsWith("/chamados") || pathname.startsWith("/suporte") || pathname.startsWith("/clientes") || pathname.startsWith("/rotinas") || pathname.startsWith("/ajustes") || pathname.startsWith("/painel") || pathname.startsWith("/metricas") || pathname.startsWith("/pendencias") || pathname.startsWith("/cadastros") || pathname.startsWith("/implantacoes");
   const isUsuariosModule = pathname.startsWith("/usuarios") || pathname.startsWith("/convites") || pathname.startsWith("/usuarios-config");
 
-  const cadastrosMenuItem = { 
+  const cadastrosComercial = { 
     title: "Cadastros", 
     url: "/cadastros", 
     icon: Building2, 
     highlight: true,
     roles: ["Administrador", "Suporte", "Desenvolvedor", "Padrão", "Comercial", "Financeiro", "Vendedor", "Usuário"],
     subItems: [
-      { title: "Cliente", url: "/clientes" },
+      { title: "Empresas", url: "/empresas" }
+    ]
+  };
+
+  const cadastrosSuporte = { 
+    title: "Cadastros", 
+    url: "/cadastros", 
+    icon: Building2, 
+    highlight: true,
+    roles: ["Administrador", "Suporte", "Desenvolvedor", "Padrão", "Comercial", "Financeiro", "Vendedor", "Usuário"],
+    subItems: [
+      { title: "Empresas", url: "/clientes" },
       { title: "Setores", url: "/cadastros/setores" },
       { title: "Tickets", url: "/cadastros/tickets" },
       { title: "Módulos Eros", url: "/cadastros/modulos-eros" },
@@ -45,28 +56,29 @@ export function AppSidebar() {
 
   const comercialItems = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["Administrador", "Comercial", "Financeiro", "Padrão", "Vendedor", "Usuário"] },
-    { title: "Empresas", url: "/empresas", icon: Building2, roles: ["Administrador", "Comercial", "Financeiro", "Padrão", "Vendedor", "Usuário"] },
     { title: "Leads", url: "/leads", icon: Target, roles: ["Administrador", "Comercial", "Vendedor", "Usuário"] },
     { title: "Documentos", url: "/diagnosticos", icon: FileText, roles: ["Administrador", "Comercial", "Vendedor"] },
+    { title: "Orçamento Avulso", url: "/orcamento-avulso", icon: Calculator, roles: ["Administrador", "Comercial", "Vendedor", "Usuário"] },
     { title: "Pipeline", url: "/pipeline", icon: KanbanSquare, roles: ["Administrador", "Comercial", "Padrão", "Vendedor", "Usuário"] },
     { title: "Agenda", url: "/agenda", icon: CalendarDays, roles: ["Administrador", "Comercial", "Padrão", "Vendedor", "Usuário"] },
     { title: "Histórico", url: "/historico", icon: ListTodo, roles: ["Administrador", "Comercial", "Padrão", "Vendedor", "Usuário"] },
-    cadastrosMenuItem,
+    cadastrosComercial,
     { title: "Relatórios", url: "/relatorios", icon: BarChart3, roles: ["Administrador", "Financeiro"] },
   ];
 
   const suporteItems = [
     { title: "Dashboard", url: "/painel", icon: LayoutDashboard, roles: ["Administrador", "Suporte", "Desenvolvedor"] },
     { title: "Chamados", url: "/chamados", icon: LifeBuoy, roles: ["Administrador", "Suporte", "Desenvolvedor", "Padrão"] },
+    { title: "Implantações", url: "/implantacoes", icon: KanbanSquare, roles: ["Administrador", "Suporte", "Desenvolvedor", "Padrão", "Comercial", "Vendedor", "Usuário"] },
     { title: "Pendências", url: "/pendencias", icon: KanbanSquare, roles: ["Administrador", "Suporte", "Desenvolvedor", "Padrão"] },
     { title: "Rotina de Contatos", url: "/rotinas", icon: Contact, roles: ["Administrador", "Suporte", "Desenvolvedor", "Padrão"] },
-    cadastrosMenuItem,
+    cadastrosSuporte,
     { title: "Relatórios", url: "/metricas", icon: BarChart, roles: ["Administrador", "Suporte", "Desenvolvedor"] },
   ];
 
   const usuariosItems = [
     { title: "Gestão de Usuários", url: "/usuarios", icon: Users, roles: ["Administrador", "Desenvolvedor"] },
-    cadastrosMenuItem,
+    cadastrosSuporte,
   ];
 
   let rawItems = comercialItems;

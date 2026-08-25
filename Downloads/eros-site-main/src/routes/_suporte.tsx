@@ -18,6 +18,7 @@ const rolesMatrix: Record<string, string[]> = {
   "/painel": ["Administrador", "Suporte", "Desenvolvedor"],
   "/metricas": ["Administrador", "Suporte", "Desenvolvedor"],
   "/ajustes": ["Administrador", "Desenvolvedor"],
+  "/implantacoes": ["Administrador", "Suporte", "Desenvolvedor", "Padrão", "Comercial", "Vendedor", "Usuário"],
 };
 
 function SuporteLayout() {

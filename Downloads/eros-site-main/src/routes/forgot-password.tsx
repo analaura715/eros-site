@@ -98,25 +98,7 @@ function ForgotPasswordPage() {
           </div>
         </div>
         
-        {/* Ilustração 3D */}
-        <div 
-          className="absolute right-0 top-[25%] translate-x-[15%] pointer-events-none"
-          style={{
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? 'translateX(15%) translateY(0) scale(1)' : 'translateX(25%) translateY(20px) scale(0.95)',
-            transition: 'all 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s'
-          }}
-        >
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0D1B4C] to-transparent z-10 w-32" />
-            <img 
-              src="/hero-3d.jpg" 
-              alt="CRM Abstract 3D" 
-              className="w-[500px] h-[500px] object-cover rounded-full mix-blend-screen opacity-90 blur-[1px] shadow-2xl" 
-            />
-            <div className="absolute inset-0 rounded-full border-[1px] border-white/10 shadow-[0_0_100px_rgba(31,94,255,0.2)]" />
-          </div>
-        </div>
+
 
         {/* Footer lateral */}
         <div className="relative z-10 text-xs text-white/40 flex gap-6">

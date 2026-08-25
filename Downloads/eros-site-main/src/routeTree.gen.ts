@@ -47,6 +47,8 @@ import { Route as SuporteCadastrosSetoresRouteImport } from './routes/_suporte.c
 import { Route as SuporteCadastrosTicketsRouteImport } from './routes/_suporte.cadastros.tickets'
 import { Route as SuporteClientesIndexRouteImport } from './routes/_suporte.clientes.index'
 import { Route as SuporteClientesIdRouteImport } from './routes/_suporte.clientes.$id'
+import { Route as SuporteImplantacoesIndexRouteImport } from './routes/_suporte.implantacoes.index'
+import { Route as SuporteImplantacoesIdRouteImport } from './routes/_suporte.implantacoes.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -240,6 +242,17 @@ const SuporteClientesIdRoute = SuporteClientesIdRouteImport.update({
   path: '/clientes/$id',
   getParentRoute: () => SuporteRoute,
 } as any)
+const SuporteImplantacoesIndexRoute =
+  SuporteImplantacoesIndexRouteImport.update({
+    id: '/implantacoes/',
+    path: '/implantacoes/',
+    getParentRoute: () => SuporteRoute,
+  } as any)
+const SuporteImplantacoesIdRoute = SuporteImplantacoesIdRouteImport.update({
+  id: '/implantacoes/$id',
+  path: '/implantacoes/$id',
+  getParentRoute: () => SuporteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -274,10 +287,12 @@ export interface FileRoutesByFullPath {
   '/cadastros/setores': typeof SuporteCadastrosSetoresRoute
   '/cadastros/tickets': typeof SuporteCadastrosTicketsRoute
   '/clientes/$id': typeof SuporteClientesIdRoute
+  '/implantacoes/$id': typeof SuporteImplantacoesIdRoute
   '/diagnosticos/': typeof ComercialDiagnosticosIndexRoute
   '/empresas/': typeof ComercialEmpresasIndexRoute
   '/leads/': typeof ComercialLeadsIndexRoute
   '/clientes/': typeof SuporteClientesIndexRoute
+  '/implantacoes/': typeof SuporteImplantacoesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -312,10 +327,12 @@ export interface FileRoutesByTo {
   '/cadastros/setores': typeof SuporteCadastrosSetoresRoute
   '/cadastros/tickets': typeof SuporteCadastrosTicketsRoute
   '/clientes/$id': typeof SuporteClientesIdRoute
+  '/implantacoes/$id': typeof SuporteImplantacoesIdRoute
   '/diagnosticos': typeof ComercialDiagnosticosIndexRoute
   '/empresas': typeof ComercialEmpresasIndexRoute
   '/leads': typeof ComercialLeadsIndexRoute
   '/clientes': typeof SuporteClientesIndexRoute
+  '/implantacoes': typeof SuporteImplantacoesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -353,10 +370,12 @@ export interface FileRoutesById {
   '/_suporte/cadastros/setores': typeof SuporteCadastrosSetoresRoute
   '/_suporte/cadastros/tickets': typeof SuporteCadastrosTicketsRoute
   '/_suporte/clientes/$id': typeof SuporteClientesIdRoute
+  '/_suporte/implantacoes/$id': typeof SuporteImplantacoesIdRoute
   '/_comercial/diagnosticos/': typeof ComercialDiagnosticosIndexRoute
   '/_comercial/empresas/': typeof ComercialEmpresasIndexRoute
   '/_comercial/leads/': typeof ComercialLeadsIndexRoute
   '/_suporte/clientes/': typeof SuporteClientesIndexRoute
+  '/_suporte/implantacoes/': typeof SuporteImplantacoesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -393,10 +412,12 @@ export interface FileRouteTypes {
     | '/cadastros/setores'
     | '/cadastros/tickets'
     | '/clientes/$id'
+    | '/implantacoes/$id'
     | '/diagnosticos/'
     | '/empresas/'
     | '/leads/'
     | '/clientes/'
+    | '/implantacoes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -431,10 +452,12 @@ export interface FileRouteTypes {
     | '/cadastros/setores'
     | '/cadastros/tickets'
     | '/clientes/$id'
+    | '/implantacoes/$id'
     | '/diagnosticos'
     | '/empresas'
     | '/leads'
     | '/clientes'
+    | '/implantacoes'
   id:
     | '__root__'
     | '/'
@@ -471,10 +494,12 @@ export interface FileRouteTypes {
     | '/_suporte/cadastros/setores'
     | '/_suporte/cadastros/tickets'
     | '/_suporte/clientes/$id'
+    | '/_suporte/implantacoes/$id'
     | '/_comercial/diagnosticos/'
     | '/_comercial/empresas/'
     | '/_comercial/leads/'
     | '/_suporte/clientes/'
+    | '/_suporte/implantacoes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -758,6 +783,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuporteClientesIdRouteImport
       parentRoute: typeof SuporteRoute
     }
+    '/_suporte/implantacoes/': {
+      id: '/_suporte/implantacoes/'
+      path: '/implantacoes'
+      fullPath: '/implantacoes/'
+      preLoaderRoute: typeof SuporteImplantacoesIndexRouteImport
+      parentRoute: typeof SuporteRoute
+    }
+    '/_suporte/implantacoes/$id': {
+      id: '/_suporte/implantacoes/$id'
+      path: '/implantacoes/$id'
+      fullPath: '/implantacoes/$id'
+      preLoaderRoute: typeof SuporteImplantacoesIdRouteImport
+      parentRoute: typeof SuporteRoute
+    }
   }
 }
 
@@ -815,7 +854,9 @@ interface SuporteRouteChildren {
   SuporteCadastrosSetoresRoute: typeof SuporteCadastrosSetoresRoute
   SuporteCadastrosTicketsRoute: typeof SuporteCadastrosTicketsRoute
   SuporteClientesIdRoute: typeof SuporteClientesIdRoute
+  SuporteImplantacoesIdRoute: typeof SuporteImplantacoesIdRoute
   SuporteClientesIndexRoute: typeof SuporteClientesIndexRoute
+  SuporteImplantacoesIndexRoute: typeof SuporteImplantacoesIndexRoute
 }
 
 const SuporteRouteChildren: SuporteRouteChildren = {
@@ -830,7 +871,9 @@ const SuporteRouteChildren: SuporteRouteChildren = {
   SuporteCadastrosSetoresRoute: SuporteCadastrosSetoresRoute,
   SuporteCadastrosTicketsRoute: SuporteCadastrosTicketsRoute,
   SuporteClientesIdRoute: SuporteClientesIdRoute,
+  SuporteImplantacoesIdRoute: SuporteImplantacoesIdRoute,
   SuporteClientesIndexRoute: SuporteClientesIndexRoute,
+  SuporteImplantacoesIndexRoute: SuporteImplantacoesIndexRoute,
 }
 
 const SuporteRouteWithChildren =

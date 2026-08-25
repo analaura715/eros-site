@@ -8,7 +8,7 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, Clock, PhoneCall, Trash2, Edit, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Clock, PhoneCall, Trash2, Edit, ChevronLeft, ChevronRight, MessageSquare, CheckCircle2 } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AgendaForm, AgendaFormValues } from '@/components/forms/agenda-form';
 import { toast } from "sonner";
@@ -94,6 +94,10 @@ function AgendaComponent() {
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
 
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Painel de envio de WhatsApp — cada item é um destinatário para o usuário clicar
+  const [pendingWhatsApps, setPendingWhatsApps] = useState<{ label: string; url: string; enviado: boolean }[]>([]);
+  const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
 
   const fetchAgenda = async () => {
     const { data, error } = await supabase
@@ -196,6 +200,11 @@ function AgendaComponent() {
       horario_lembrete: selectedEvent.horario_lembrete || '08:00',
       email_secretaria: selectedEvent.email_secretaria || '',
       tel_secretaria: selectedEvent.tel_secretaria || '',
+      modalidade: selectedEvent.modalidade || 'Remoto',
+      local_link: selectedEvent.local_link || '',
+      mensagem_cliente_imediata: selectedEvent.mensagem_cliente_imediata || '',
+      mensagem_cliente_lembrete: selectedEvent.mensagem_cliente_lembrete || '',
+      mensagem_equipe: selectedEvent.mensagem_equipe || '',
     });
     setIsSheetOpen(true);
   };
@@ -237,6 +246,112 @@ function AgendaComponent() {
       horario_lembrete: data.horario_lembrete || null,
       email_secretaria: data.email_secretaria || null,
       tel_secretaria: data.tel_secretaria || null,
+      modalidade: data.modalidade,
+      local_link: data.local_link || null,
+      mensagem_cliente_imediata: data.mensagem_cliente_imediata || null,
+      mensagem_cliente_lembrete: data.mensagem_cliente_lembrete || null,
+      mensagem_equipe: data.mensagem_equipe || null,
+    };
+
+    const buildWhatsAppLinks = async () => {
+      let empresaNome = "Não vinculada";
+
+      // Busca apenas o nome da empresa (telefone já vem do campo do formulário)
+      if (data.lead_id && data.lead_id !== "none") {
+        const { data: lead } = await supabase.from('leads').select('nome').eq('id', data.lead_id).single();
+        if (lead) empresaNome = lead.nome;
+      }
+
+      const dia = format(dataInicioFinal, "dd/MM/yyyy");
+      const horario = format(dataInicioFinal, "HH:mm");
+
+      let localTexto = data.modalidade === "Presencial" ? "📍 *Presencial*" : "💻 *Remoto (Online)*";
+      if (data.local_link) {
+        localTexto += `\n${data.modalidade === "Presencial" ? "Endereço" : "Link"}: ${data.local_link}`;
+      }
+
+      const links: { label: string; url: string; enviado: boolean }[] = [];
+
+      // 1. Karen (equipe interna) — fixo
+      if (data.lembrete_anterior) {
+        const customMsg = data.mensagem_equipe ? `${data.mensagem_equipe}\n\n` : '';
+        const msg = `${customMsg}*Novo Agendamento: ${data.tipo}!*\n\n🏢 *Empresa:* ${empresaNome}\n📅 *Data:* ${dia}\n⏰ *Horário:* ${horario}\n${localTexto}\n\n_Agendado via Venux_`;
+        links.push({
+          label: `👤 Karen — (17) 98201-4195`,
+          url: `https://api.whatsapp.com/send?phone=5517982014195&text=${encodeURIComponent(msg)}`,
+          enviado: false,
+        });
+
+        // Número extra da equipe
+        if (data.tel_secretaria) {
+          const numExtra = data.tel_secretaria.replace(/\D/g, '');
+          const numFinal = numExtra.startsWith('55') ? numExtra : `55${numExtra}`;
+          if (numExtra.length >= 10) {
+            links.push({
+              label: `👤 Equipe Extra — ${data.tel_secretaria}`,
+              url: `https://api.whatsapp.com/send?phone=${numFinal}&text=${encodeURIComponent(msg)}`,
+              enviado: false,
+            });
+          }
+        }
+      }
+
+      // 2. Cliente — usa o telefone do campo do formulário (auto-preenchido ou digitado)
+      const telefoneCliente = data.telefone_cliente?.trim() || '';
+      if (data.lembrete_dia && telefoneCliente) {
+        const numeroLimpo = telefoneCliente.replace(/\D/g, '');
+        const numeroFinal = numeroLimpo.startsWith('55') ? numeroLimpo : `55${numeroLimpo}`;
+        if (numeroLimpo.length >= 10) {
+          const customMsg = data.mensagem_cliente_imediata
+            ? `${data.mensagem_cliente_imediata}\n\n`
+            : 'Olá! Seu agendamento foi confirmado.\n\n';
+          const msg = `${customMsg}*Detalhes:*\n📅 *Data:* ${dia}\n⏰ *Horário:* ${horario}\n${localTexto}\n\n_Nos vemos lá!_`;
+          links.push({
+            label: `🏢 ${empresaNome} — ${telefoneCliente}`,
+            url: `https://api.whatsapp.com/send?phone=${numeroFinal}&text=${encodeURIComponent(msg)}`,
+            enviado: false,
+          });
+
+          // Lembrete agendado no localStorage
+          if (data.horario_lembrete) {
+            const [hLembrete, mLembrete] = data.horario_lembrete.split(':').map(Number);
+            const dataLembrete = new Date(dataInicioFinal);
+            dataLembrete.setDate(dataLembrete.getDate() - 1);
+            dataLembrete.setHours(hLembrete, mLembrete, 0, 0);
+            if (dataLembrete < new Date()) {
+              dataLembrete.setDate(dataInicioFinal.getDate());
+              dataLembrete.setHours(hLembrete, mLembrete, 0, 0);
+            }
+            const msgLembrete = data.mensagem_cliente_lembrete
+              ? `${data.mensagem_cliente_lembrete}\n\n`
+              : 'Olá! Passando para lembrar do nosso compromisso.\n\n';
+            const mensagemLembrete = `${msgLembrete}*Detalhes:*\n📅 *Data:* ${dia}\n⏰ *Horário:* ${horario}\n${localTexto}\n\n_Até lá!_`;
+            const lembretes: any[] = JSON.parse(localStorage.getItem('venux_lembretes_pendentes') || '[]');
+            lembretes.push({
+              id: crypto.randomUUID(),
+              enviado: false,
+              dispararEm: dataLembrete.toISOString(),
+              numeroCliente: numeroFinal,
+              empresa: empresaNome,
+              mensagem: mensagemLembrete,
+              tituloEvento: data.titulo,
+              diaEvento: dia,
+              horarioEvento: horario,
+            });
+            localStorage.setItem('venux_lembretes_pendentes', JSON.stringify(lembretes));
+            toast.info(`🔔 Lembrete agendado para ${format(dataLembrete, "dd/MM 'às' HH:mm")} — aparecerá nas notificações.`);
+          }
+        } else if (data.lembrete_dia) {
+          toast.warning('⚠️ Número do cliente inválido — confirme o WhatsApp no formulário.');
+        }
+      } else if (data.lembrete_dia && !telefoneCliente) {
+        toast.warning('⚠️ Nenhum WhatsApp do cliente informado — o lembrete externo não foi enviado.');
+      }
+
+      if (links.length > 0) {
+        setPendingWhatsApps(links);
+        setIsWhatsAppDialogOpen(true);
+      }
     };
 
     if (data.id) {
@@ -248,6 +363,7 @@ function AgendaComponent() {
         toast.success("Evento atualizado com sucesso.");
         fetchAgenda();
         setIsSheetOpen(false);
+        buildWhatsAppLinks();
       }
     } else {
       const { error } = await supabase.from('agenda').insert([payload]);
@@ -257,7 +373,6 @@ function AgendaComponent() {
       } else {
         toast.success("Novo evento agendado com sucesso.");
         
-        // Disparar notificação se foi atribuído a um usuário específico (simulação local)
         if (data.usuario_id) {
           const atribuidoA = state.users?.find(u => u.id === data.usuario_id);
           if (atribuidoA && data.usuario_id !== auth?.id) {
@@ -267,6 +382,7 @@ function AgendaComponent() {
         
         fetchAgenda();
         setIsSheetOpen(false);
+        buildWhatsAppLinks();
       }
     }
   };
@@ -496,6 +612,69 @@ function AgendaComponent() {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog de Despacho de WhatsApp */}
+      <Dialog open={isWhatsAppDialogOpen} onOpenChange={setIsWhatsAppDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-base">Enviar Notificações</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Clique em cada botão para abrir o WhatsApp.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            {pendingWhatsApps.map((item, idx) => (
+              <div
+                key={idx}
+                className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-colors ${
+                  item.enviado ? 'bg-emerald-50 border-emerald-200' : 'bg-card hover:bg-muted/30'
+                }`}
+              >
+                <span className="text-sm font-medium truncate flex-1">{item.label}</span>
+                {item.enviado ? (
+                  <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold shrink-0">
+                    <CheckCircle2 className="h-4 w-4" /> Enviado
+                  </span>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-3 text-xs gap-1.5"
+                    onClick={() => {
+                      window.open(item.url, '_blank');
+                      setPendingWhatsApps(prev =>
+                        prev.map((p, i) => i === idx ? { ...p, enviado: true } : p)
+                      );
+                    }}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    Abrir WhatsApp
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsWhatsAppDialogOpen(false)}
+              className="w-full"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
+
   );
 }

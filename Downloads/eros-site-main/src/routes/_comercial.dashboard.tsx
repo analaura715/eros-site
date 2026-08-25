@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { format, isSameDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PhoneCall, Briefcase, Pencil, MessageCircle, FileText, CheckCircle2, TrendingUp, ChevronRight, Loader2, SearchX, Calendar } from "lucide-react";
+import { PhoneCall, Briefcase, Pencil, MessageCircle, FileText, CheckCircle2, TrendingUp, ChevronRight, Loader2, SearchX, Calendar, Building2, MapPin } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +21,7 @@ export const Route = createFileRoute('/_comercial/dashboard')({
 function DashboardComponent() {
   const navigate = useNavigate();
   const [selectedKpi, setSelectedKpi] = useState<string | null>(null);
+  const [periodoFilter, setPeriodoFilter] = useState("mes");
   
   const [loadingLeads, setLoadingLeads] = useState(true);
   
@@ -32,6 +33,7 @@ function DashboardComponent() {
   
   // Dashboard Data State
   const [clientesNovos, setClientesNovos] = useState(0);
+  const [empresasFechadas, setEmpresasFechadas] = useState<any[]>([]);
   const [leadsHoje, setLeadsHoje] = useState<any[]>([]);
   const [qtdDemonstracoes, setQtdDemonstracoes] = useState(0);
   const [qtdNegociacao, setQtdNegociacao] = useState(0);
@@ -51,13 +53,15 @@ function DashboardComponent() {
       const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString();
 
       // 1. Clientes Novos (Empresas ativas criadas este mês, indicando fechamento de negócio)
-      const { count: empresasCount } = await supabase
+      const { data: fechadasData, count: empresasCount } = await supabase
         .from('empresas')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .gte('created_at', primeiroDiaMes)
-        .eq('status', 'Ativo');
+        .eq('status', 'Ativo')
+        .order('created_at', { ascending: false });
       
       setClientesNovos(empresasCount || 0);
+      setEmpresasFechadas(fechadasData || []);
 
       // 2. Buscar Leads para montar os KPIs e Funil
       const { data: leadsData } = await supabase.from('leads').select('*');
@@ -80,20 +84,46 @@ function DashboardComponent() {
         const negociacao = leads.filter(l => l.status === 'Em negociação').length;
         setQtdNegociacao(negociacao);
 
-        // Pipeline Stages
+        // Aplicar filtro de período APENAS no Funil de Vendas
+        const startDate = (() => {
+          const hojeInicio = new Date();
+          hojeInicio.setHours(0, 0, 0, 0);
+          switch(periodoFilter) {
+            case 'hoje': return hojeInicio;
+            case 'semana': 
+              const semana = new Date(hojeInicio);
+              semana.setDate(semana.getDate() - semana.getDay());
+              return semana;
+            case '30d':
+              const trinta = new Date(hojeInicio);
+              trinta.setDate(trinta.getDate() - 30);
+              return trinta;
+            case 'mes':
+            default:
+              return new Date(hojeInicio.getFullYear(), hojeInicio.getMonth(), 1);
+          }
+        })();
+
+        const leadsFunil = leads.filter(l => {
+          // Usa updated_at se existir (para capturar a ação de mover), senão usa created_at
+          const dataAcao = new Date(l.updated_at || l.created_at);
+          return dataAcao >= startDate;
+        });
+
+        // Pipeline Stages (filtrado)
         setPipelineData([
-          { name: "Prospectada", count: leads.filter(l => l.status === 'Prospectada').length, color: "bg-blue-500", light: "bg-blue-50", text: "text-blue-700" },
-          { name: "Em Contato", count: leads.filter(l => l.status === 'Em contato' || l.status === 'Entrar em contato').length, color: "bg-indigo-500", light: "bg-indigo-50", text: "text-indigo-700" },
-          { name: "Reunião Agendada", count: demos, color: "bg-yellow-500", light: "bg-yellow-50", text: "text-yellow-700" },
-          { name: "Proposta Enviada", count: leads.filter(l => l.status === 'Proposta enviada').length, color: "bg-orange-500", light: "bg-orange-50", text: "text-orange-700" },
-          { name: "Em Negociação", count: negociacao, color: "bg-emerald-500", light: "bg-emerald-50", text: "text-emerald-700" },
+          { name: "Prospectada", count: leadsFunil.filter(l => l.status === 'Prospectada').length, color: "bg-blue-500", light: "bg-blue-50", text: "text-blue-700" },
+          { name: "Em Contato", count: leadsFunil.filter(l => l.status === 'Em contato' || l.status === 'Entrar em contato').length, color: "bg-indigo-500", light: "bg-indigo-50", text: "text-indigo-700" },
+          { name: "Reunião Agendada", count: leadsFunil.filter(l => l.status === 'Reunião agendada').length, color: "bg-yellow-500", light: "bg-yellow-50", text: "text-yellow-700" },
+          { name: "Proposta Enviada", count: leadsFunil.filter(l => l.status === 'Proposta enviada').length, color: "bg-orange-500", light: "bg-orange-50", text: "text-orange-700" },
+          { name: "Em Negociação", count: leadsFunil.filter(l => l.status === 'Em negociação').length, color: "bg-emerald-500", light: "bg-emerald-50", text: "text-emerald-700" },
         ]);
       }
       setLoadingLeads(false);
     };
 
     fetchDashboardData();
-  }, []);
+  }, [periodoFilter]);
 
   const metaProgress = Math.min(Math.round((clientesNovos / metaCount) * 100), 100);
   const faltam = Math.max(metaCount - clientesNovos, 0);
@@ -140,7 +170,7 @@ function DashboardComponent() {
         </div>
         
         <div className="flex items-center">
-          <Select defaultValue="mes">
+          <Select value={periodoFilter} onValueChange={setPeriodoFilter}>
             <SelectTrigger className="w-[180px] bg-white rounded-xl shadow-sm border-gray-200">
               <SelectValue placeholder="Selecione o período" />
             </SelectTrigger>
@@ -164,7 +194,7 @@ function DashboardComponent() {
         >
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Meta do Mês</CardTitle>
+            <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Meta de Prospecção</CardTitle>
             <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-indigo-600 rounded-full hover:bg-indigo-50 transition-colors z-20">
               <Pencil className="h-3.5 w-3.5" />
             </Button>
@@ -405,14 +435,40 @@ function DashboardComponent() {
               Últimas propostas aprovadas e com contrato assinado.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 p-6">
-            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 space-y-3 min-h-[200px]">
-              <div className="h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center mb-2">
-                <SearchX className="h-8 w-8 text-gray-300" />
+          <CardContent className="flex-1 p-0">
+            {empresasFechadas.length > 0 ? (
+              <div className="flex flex-col h-full overflow-y-auto max-h-[250px]">
+                {empresasFechadas.map((empresa) => (
+                  <div key={empresa.id} className="flex items-center gap-4 p-4 border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                    <div className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                      <Building2 className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold text-gray-900 truncate">{empresa.nome}</h4>
+                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                        <MapPin className="h-3 w-3" />
+                        <span className="truncate">{empresa.cidade || 'Local não informado'}</span>
+                        <span>•</span>
+                        <span className="text-emerald-600 font-medium">Novo Cliente</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs text-gray-500">
+                        {format(new Date(empresa.created_at), "dd MMM")}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <h3 className="text-base font-bold text-gray-900">Ainda sem vendas</h3>
-              <p className="text-sm max-w-[200px]">Nenhuma venda fechada neste período. Continue prospectando!</p>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 space-y-3 min-h-[200px] p-6">
+                <div className="h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center mb-2">
+                  <SearchX className="h-8 w-8 text-gray-300" />
+                </div>
+                <h3 className="text-base font-bold text-gray-900">Ainda sem vendas</h3>
+                <p className="text-sm max-w-[200px]">Nenhuma venda fechada neste período. Continue prospectando!</p>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="pt-3 pb-3 border-t border-gray-100 mt-auto bg-gray-50/30">
             <Button variant="ghost" className="w-full text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 h-9" asChild>
@@ -433,10 +489,10 @@ function DashboardComponent() {
         <DialogContent className="sm:max-w-[425px] rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl">
-              {selectedKpi === "meta" && "Editar Meta do Mês"}
+              {selectedKpi === "meta" && "Editar Meta de Prospecção"}
             </DialogTitle>
             <DialogDescription>
-              {selectedKpi === "meta" && "Ajuste o objetivo de novos clientes para este mês."}
+              {selectedKpi === "meta" && "Ajuste o objetivo de novos clientes convertidos para este mês."}
             </DialogDescription>
           </DialogHeader>
 

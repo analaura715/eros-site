@@ -179,8 +179,8 @@ function EmpresasComponent() {
             <Building2 className="h-6 w-6 text-primary" />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Clientes</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Gerencie o portfólio de clientes do suporte e realize a manutenção de dados.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Empresas</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Gerencie o portfólio de empresas do suporte e realize a manutenção de dados.</p>
           </div>
         </div>
         <Button 
@@ -188,7 +188,7 @@ function EmpresasComponent() {
           onClick={handleOpenNovaEmpresa}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Novo Cliente
+          Nova Empresa
         </Button>
       </div>
 
@@ -197,7 +197,7 @@ function EmpresasComponent() {
         {/* Aviso */}
         <div className="bg-primary/10 border border-primary/20 text-primary text-sm px-4 py-3 rounded-xl flex items-center shadow-sm">
           <div className="h-2 w-2 rounded-full bg-primary mr-3 animate-pulse" />
-          <p><strong>Aviso:</strong> Esta tela é destinada ao gerenciamento de <strong>clientes que já estão fechados (ativos)</strong>.</p>
+          <p><strong>Aviso:</strong> Esta tela é destinada ao gerenciamento de <strong>empresas que já estão fechadas (ativas)</strong>.</p>
         </div>
 
         {/* Barra de Pesquisa e Filtros (Card Envolvente) */}
@@ -313,7 +313,7 @@ function EmpresasComponent() {
           <div className="bg-muted/30 border-t px-6 py-4 text-xs font-medium text-muted-foreground flex items-center justify-between">
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              Exibindo <strong>{filtered.length}</strong> de <strong>{empresas.length}</strong> clientes ativos.
+              Exibindo <strong>{filtered.length}</strong> de <strong>{empresas.length}</strong> empresas ativas.
             </span>
           </div>
         </div>
@@ -322,9 +322,9 @@ function EmpresasComponent() {
       <Dialog open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <DialogContent className="sm:max-w-[800px] p-0 h-[85vh] flex flex-col gap-0 overflow-hidden">
           <DialogHeader className="p-4 border-b bg-white dark:bg-slate-950 shrink-0">
-            <DialogTitle>{empresaEditando ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
+            <DialogTitle>{empresaEditando ? 'Editar Empresa' : 'Nova Empresa'}</DialogTitle>
             <DialogDescription>
-              Preencha os dados do cliente abaixo.
+              Preencha os dados da empresa abaixo.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">

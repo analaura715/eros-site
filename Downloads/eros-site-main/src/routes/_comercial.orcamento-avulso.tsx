@@ -41,7 +41,8 @@ function OrcamentoAvulsoPage() {
     override_plano_nome: 'Plano Professional',
     override_mensalidade: '2.248,90',
     override_desconto: '423,80',
-    override_setup: '650,00'
+    override_setup: '650,00',
+    override_setup_parcelas: '1'
   });
 
   useEffect(() => {
@@ -237,13 +238,14 @@ function OrcamentoAvulsoPage() {
     const pMens = parseCurrencyStr(form.override_mensalidade);
     const pDesc = parseCurrencyStr(form.override_desconto);
     const pSet = parseCurrencyStr(form.override_setup);
+    const pSetParc = form.override_setup_parcelas || '1';
     
     let url = `/proposta/avulso?isManual=true&nome=${encodeURIComponent(nome)}`;
     
     if (pMens > 0) {
-      url += `&plano_nome=${encodeURIComponent(pNome)}&plano_valor=${pMens}&desconto=${pDesc}&setup=${pSet}`;
+      url += `&plano_nome=${encodeURIComponent(pNome)}&plano_valor=${pMens}&desconto=${pDesc}&setup=${pSet}&setup_parcelas=${pSetParc}`;
     } else {
-      url += `&setup=${valorTotalSetup}&mensalidade=${valorTotalMensal}&desconto=${descontoMensalidade}&desconto_setup=${descontoImplantacao}`;
+      url += `&setup=${valorTotalSetup}&mensalidade=${valorTotalMensal}&desconto=${descontoMensalidade}&desconto_setup=${descontoImplantacao}&setup_parcelas=${pSetParc}`;
     }
 
     navigate({ to: url });
@@ -475,6 +477,22 @@ function OrcamentoAvulsoPage() {
                       onChange={e => handleCurrencyChange('override_setup', e.target.value)} 
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-semibold text-slate-700">Parcelas (Implantação)</Label>
+                  <Select value={form.override_setup_parcelas} onValueChange={(val) => setForm({...form, override_setup_parcelas: val})}>
+                    <SelectTrigger className="w-full bg-white h-10 shadow-sm border-slate-200 focus:ring-indigo-500">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1x (À Vista)</SelectItem>
+                      <SelectItem value="2">2x</SelectItem>
+                      <SelectItem value="3">3x</SelectItem>
+                      <SelectItem value="4">4x</SelectItem>
+                      <SelectItem value="5">5x</SelectItem>
+                      <SelectItem value="6">6x</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>

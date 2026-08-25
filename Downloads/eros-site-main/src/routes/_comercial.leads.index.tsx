@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ConvertLeadDialog } from "@/components/convert-lead-dialog";
 
 export const Route = createFileRoute('/_comercial/leads/')({
   component: LeadsComponent,
@@ -30,6 +31,8 @@ function LeadsComponent() {
   
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [leadEditando, setLeadEditando] = useState<Partial<LeadFormValues> | undefined>(undefined);
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
+  const [leadToConvert, setLeadToConvert] = useState<any>(null);
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -59,8 +62,11 @@ function LeadsComponent() {
            
     const matchStatus = statusFilter === 'todos' || e.status === statusFilter;
     
-    const isArquivado = e.status === 'Arquivado';
-    if (currentTab === 'ativos' && isArquivado) return false;
+    const isArquivado = e.status === 'Arquivado' || e.status === 'Sem resposta' || e.status === 'Convertido';
+    const isVisita = e.status === 'Visita';
+    
+    if (currentTab === 'ativos' && (isArquivado || isVisita)) return false;
+    if (currentTab === 'visitas' && !isVisita) return false;
     if (currentTab === 'arquivados' && !isArquivado) return false;
 
     return matchSearch && matchStatus;
@@ -103,6 +109,12 @@ function LeadsComponent() {
     setIsSheetOpen(true);
   };
 
+  const handleOpenConvert = (lead: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLeadToConvert(lead);
+    setIsConvertModalOpen(true);
+  };
+
   const handleDeleteLead = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (confirm("Tem certeza que deseja excluir este Lead?")) {
@@ -138,6 +150,19 @@ function LeadsComponent() {
         toast.error("Erro ao restaurar lead.");
       } else {
         toast.success("Lead restaurado com sucesso.");
+        fetchLeads();
+      }
+    }
+  };
+
+  const handleMoveToVisita = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (confirm("Deseja mover este lead para a lista de Visitas?")) {
+      const { error } = await supabase.from('leads').update({ status: 'Visita' }).eq('id', id);
+      if (error) {
+        toast.error("Erro ao alterar status.");
+      } else {
+        toast.success("Lead movido para Visitas.");
         fetchLeads();
       }
     }
@@ -250,10 +275,12 @@ function LeadsComponent() {
       case 'Entrar em contato': return 'bg-amber-100 text-amber-700 border-amber-200';
       case 'Em contato': return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'Reunião agendada': return 'bg-teal-100 text-teal-700 border-teal-200';
+      case 'Visita': return 'bg-pink-100 text-pink-700 border-pink-200';
       case 'Em negociação': return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'Proposta enviada': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'Sem interesse': return 'bg-red-100 text-red-700 border-red-200';
       case 'Sem resposta': return 'bg-gray-100 text-gray-500 border-gray-200';
+      case 'Convertido': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
       case 'Arquivado': return 'bg-slate-200 text-slate-500 border-slate-300 line-through decoration-slate-400';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
@@ -453,6 +480,7 @@ function LeadsComponent() {
                 <SelectItem value="Entrar em contato">Entrar em contato</SelectItem>
                 <SelectItem value="Em contato">Em contato</SelectItem>
                 <SelectItem value="Reunião agendada">Reunião agendada</SelectItem>
+                <SelectItem value="Visita">Visita</SelectItem>
                 <SelectItem value="Em negociação">Em negociação</SelectItem>
                 <SelectItem value="Proposta enviada">Proposta enviada</SelectItem>
                 <SelectItem value="Sem interesse">Sem interesse</SelectItem>
@@ -468,6 +496,9 @@ function LeadsComponent() {
             <TabsList className="bg-card border shadow-sm">
               <TabsTrigger value="ativos" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                 Leads Ativos
+              </TabsTrigger>
+              <TabsTrigger value="visitas" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                Visitas
               </TabsTrigger>
               <TabsTrigger value="arquivados" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                 Arquivados
@@ -582,8 +613,32 @@ function LeadsComponent() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+
+                        {lead.status !== 'Convertido' && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-full hover:bg-emerald-100 hover:text-emerald-600 transition-colors"
+                            title="Converter em Empresa"
+                            onClick={(e) => handleOpenConvert(lead, e)}
+                          >
+                            <Building2 className="h-4 w-4" />
+                          </Button>
+                        )}
                         
-                        {lead.status === 'Arquivado' ? (
+                        {lead.status !== 'Visita' && lead.status !== 'Convertido' && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-full hover:bg-pink-100 hover:text-pink-600 transition-colors"
+                            title="Marcar Visita"
+                            onClick={(e) => handleMoveToVisita(lead.id, e)}
+                          >
+                            <MapPin className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        {lead.status === 'Arquivado' || lead.status === 'Sem resposta' ? (
                           <Button 
                             variant="ghost" 
                             size="icon" 
@@ -640,7 +695,7 @@ function LeadsComponent() {
           
           <div className="bg-muted/30 border-t px-6 py-4 text-xs font-medium text-muted-foreground flex items-center justify-between">
             <span className="flex items-center gap-2">
-              Exibindo <strong>{filtered.length}</strong> leads {currentTab === 'ativos' ? 'de prospecção.' : 'arquivados.'}
+              Exibindo <strong>{filtered.length}</strong> leads {currentTab === 'ativos' ? 'de prospecção.' : currentTab === 'visitas' ? 'para visita.' : 'arquivados.'}
             </span>
           </div>
         </div>
@@ -674,6 +729,13 @@ function LeadsComponent() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <ConvertLeadDialog 
+        open={isConvertModalOpen} 
+        onOpenChange={setIsConvertModalOpen} 
+        lead={leadToConvert} 
+        onSuccess={fetchLeads} 
+      />
     </div>
   );
 }

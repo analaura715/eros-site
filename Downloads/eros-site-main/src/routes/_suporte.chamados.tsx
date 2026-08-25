@@ -672,7 +672,12 @@ function ChamadosPage() {
                                 return (
                                   <div key={idx} className="relative group w-20 h-20 border rounded-md overflow-hidden bg-white shadow-sm flex items-center justify-center">
                                     {isImage ? (
-                                      <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
+                                      <img 
+                                        src={URL.createObjectURL(file)} 
+                                        alt="Preview" 
+                                        className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" 
+                                        onClick={() => setPreviewImage(URL.createObjectURL(file))}
+                                      />
                                     ) : (
                                       <div className="flex flex-col items-center justify-center text-slate-500">
                                         <FileText className="w-6 h-6 mb-1" />

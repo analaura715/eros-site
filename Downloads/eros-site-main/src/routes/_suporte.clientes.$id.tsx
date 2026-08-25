@@ -46,7 +46,7 @@ function EmpresaDetailComponent() {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{empresa.nome}</h1>
               <Badge variant="default" className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-400 font-normal">
-                Cliente Ativo
+                Empresa Ativa
               </Badge>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">

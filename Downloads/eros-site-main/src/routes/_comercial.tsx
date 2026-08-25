@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { useStore } from "@/lib/store";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { pushNotification } from "@/lib/notifications";
 
 export const Route = createFileRoute("/_comercial")({
   ssr: false,
@@ -31,6 +32,50 @@ function AppLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [ready, setReady] = useState(false);
+
+  // Checker de lembretes agendados — roda a cada 1 minuto
+  useEffect(() => {
+    const checkLembretes = () => {
+      try {
+        const raw = localStorage.getItem('venux_lembretes_pendentes');
+        if (!raw) return;
+        const lembretes: any[] = JSON.parse(raw);
+        const agora = new Date();
+        let houveMudanca = false;
+
+        lembretes.forEach((l) => {
+          if (l.enviado) return;
+          const dispararEm = new Date(l.dispararEm);
+          // Dispara se já passou ou está dentro dos próximos 60s
+          if (dispararEm <= agora) {
+            pushNotification({
+              type: 'lembrete_cliente',
+              title: `⏰ Lembrete: ${l.tituloEvento}`,
+              description: `Enviar lembrete para ${l.empresa} — ${l.diaEvento} às ${l.horarioEvento}`,
+              lembretePayload: {
+                numeroCliente: l.numeroCliente,
+                mensagem: l.mensagem,
+                empresa: l.empresa,
+              },
+            } as any);
+            l.enviado = true;
+            houveMudanca = true;
+          }
+        });
+
+        if (houveMudanca) {
+          localStorage.setItem('venux_lembretes_pendentes', JSON.stringify(lembretes));
+        }
+      } catch {
+        /* noop */
+      }
+    };
+
+    // Checa imediatamente ao montar e depois a cada 60 segundos
+    checkLembretes();
+    const interval = setInterval(checkLembretes, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // wait one tick for store hydration
