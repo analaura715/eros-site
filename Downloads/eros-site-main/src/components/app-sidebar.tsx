@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { VenuxLogo } from "@/components/venux-logo";
 import { LayoutDashboard, Users, CalendarDays, Building2, Contact, Target, KanbanSquare, ListTodo, FileText, BarChart3, BarChart, Settings, LifeBuoy, Calculator } from "lucide-react";
 import {
@@ -24,8 +25,27 @@ export function AppSidebar() {
   const { auth } = useStore();
   const role = auth?.role || "Padrão";
 
-  // Lógica de Permissões (RBAC) e Módulos
-  const isSupportModule = pathname.startsWith("/chamados") || pathname.startsWith("/suporte") || pathname.startsWith("/clientes") || pathname.startsWith("/rotinas") || pathname.startsWith("/ajustes") || pathname.startsWith("/painel") || pathname.startsWith("/metricas") || pathname.startsWith("/pendencias") || pathname.startsWith("/cadastros") || pathname.startsWith("/implantacoes");
+  const [activeModule, setActiveModule] = useState<'comercial' | 'suporte'>(() => {
+    const saved = localStorage.getItem('venux_active_module');
+    return (saved === 'suporte' || saved === 'comercial') ? saved : 'comercial';
+  });
+
+  useEffect(() => {
+    let nextModule = activeModule;
+    if (pathname.startsWith("/chamados") || pathname.startsWith("/suporte") || pathname.startsWith("/clientes") || pathname.startsWith("/rotinas") || pathname.startsWith("/ajustes") || pathname.startsWith("/painel") || pathname.startsWith("/metricas") || pathname.startsWith("/pendencias") || pathname.startsWith("/cadastros") || pathname.startsWith("/implantacoes")) {
+      nextModule = "suporte";
+    } else if (pathname.startsWith("/configuracoes") || pathname.startsWith("/meu-perfil")) {
+      // Keeps the current activeModule
+    } else {
+      nextModule = "comercial";
+    }
+    
+    if (nextModule !== activeModule) {
+      setActiveModule(nextModule);
+    }
+    localStorage.setItem('venux_active_module', nextModule);
+  }, [pathname, activeModule]);
+
   const isUsuariosModule = pathname.startsWith("/usuarios") || pathname.startsWith("/convites") || pathname.startsWith("/usuarios-config");
 
   const cadastrosComercial = { 
@@ -50,7 +70,6 @@ export function AppSidebar() {
       { title: "Setores", url: "/cadastros/setores" },
       { title: "Tickets", url: "/cadastros/tickets" },
       { title: "Módulos Eros", url: "/cadastros/modulos-eros" },
-      { title: "Módulos Venux", url: "/cadastros/modulos-venux" },
     ]
   };
 
@@ -82,16 +101,18 @@ export function AppSidebar() {
   ];
 
   let rawItems = comercialItems;
-  if (isSupportModule) rawItems = suporteItems;
+  if (activeModule === 'suporte') rawItems = suporteItems;
   else if (isUsuariosModule) rawItems = usuariosItems;
 
-  const items = rawItems.filter(item => item.roles.includes(role));
+  const items = rawItems.filter(item => 
+    role === "Super Administrador" || item.roles.includes(role)
+  );
 
   return (
     <Sidebar collapsible="icon" className="print:hidden">
       <SidebarHeader>
         <div className="flex items-center gap-3 px-2 py-3">
-          <VenuxLogo className="h-9 w-9 shrink-0 drop-shadow-sm" />
+          <VenuxLogo className="h-9 w-9 shrink-0 drop-shadow-sm" ignoreConfig={true} />
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden -space-y-1 pt-1">
             <span className="text-2xl font-bold tracking-tight text-[#0a1128] dark:text-white">venux</span>
             <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-semibold ml-0.5">PLATAFORMA DE GESTÃO</span>
@@ -111,11 +132,11 @@ export function AppSidebar() {
                     defaultOpen={pathname.startsWith(item.url) || pathname.startsWith("/clientes")}
                     className="group/collapsible"
                   >
-                    <SidebarMenuItem className={item.highlight ? "mt-2 mb-2 bg-primary/5 rounded-md border border-primary/10" : ""}>
+                    <SidebarMenuItem className={item.highlight ? "mt-2 mb-2 bg-primary/10 rounded-md border border-primary/20 shadow-sm" : ""}>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip={item.title} className={item.highlight ? "hover:bg-primary/10" : ""}>
+                        <SidebarMenuButton tooltip={item.title} className={item.highlight ? "hover:bg-primary/20" : ""}>
                           <item.icon className={item.highlight ? "h-4 w-4 text-primary" : "h-4 w-4"} />
-                          <span className={item.highlight ? "font-semibold text-primary" : ""}>{item.title}</span>
+                          <span className={item.highlight ? "font-bold text-primary" : ""}>{item.title}</span>
                           <ChevronRight className={`ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 ${item.highlight ? "text-primary" : ""}`} />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
