@@ -1,498 +1,783 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
-import { useSuporte } from "@/hooks/useSuporte";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
+import { usePendencias } from "@/hooks/usePendencias";
+import { useSuporte } from "@/hooks/useSuporte";
+import { Task, TaskStatus, TaskEvent } from "@/types/suporte";
+import { logExclusaoAuditoria } from "@/lib/audit";
+import { toast } from "sonner";
+
+// UI Components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Lightbulb, Users, Code, ShoppingBag, MoreHorizontal, CheckCircle2, Clock, Upload, Trash2, CalendarIcon, ChevronsUpDown, FileText } from "lucide-react";
-import { Pendencia, CategoriaPendencia, StatusPendencia } from "@/types/suporte";
-import { toast } from "sonner";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+// Icons
+import {
+  Plus,
+  Search,
+  KanbanSquare,
+  List,
+  SlidersHorizontal,
+  ClipboardList,
+  X,
+  RefreshCw,
+  Trash2,
+  AlertTriangle,
+} from "lucide-react";
+
+// Module Components
+import { PendenciasStatsBar } from "@/components/pendencias/pendencias-stats-bar";
+import { PendenciasKanban } from "@/components/pendencias/pendencias-kanban";
+import { PendenciasList } from "@/components/pendencias/pendencias-list";
+import { PendenciaDetailDrawer } from "@/components/pendencias/pendencia-detail-drawer";
+import { PendenciaCreateModal } from "@/components/pendencias/pendencia-create-modal";
+import { TaskActionModal, TaskActionType } from "@/components/pendencias/task-action-modal";
 
 export const Route = createFileRoute("/_suporte/pendencias")({
   component: PendenciasPage,
 });
 
-const getCategoryIcon = (cat: CategoriaPendencia) => {
-  switch (cat) {
-    case "Ideia": return <Lightbulb className="w-4 h-4 text-yellow-500" />;
-    case "Reunião": return <Users className="w-4 h-4 text-blue-500" />;
-    case "Desenvolvimento": return <Code className="w-4 h-4 text-purple-500" />;
-    case "Pedido": return <ShoppingBag className="w-4 h-4 text-green-500" />;
-    default: return <MoreHorizontal className="w-4 h-4 text-slate-500" />;
-  }
-};
-
-const getCategoryColor = (cat: CategoriaPendencia) => {
-  switch (cat) {
-    case "Ideia": return "bg-yellow-500/10 text-yellow-600 border-yellow-500/20";
-    case "Reunião": return "bg-blue-500/10 text-blue-600 border-blue-500/20";
-    case "Desenvolvimento": return "bg-purple-500/10 text-purple-600 border-purple-500/20";
-    case "Pedido": return "bg-green-500/10 text-green-600 border-green-500/20";
-    default: return "bg-slate-500/10 text-slate-600 border-slate-500/20";
-  }
-};
-
 function PendenciasPage() {
-  const { fetchPendencias, createPendencia, updatePendencia, uploadImagensChamado } = useSuporte();
   const { auth } = useStore();
-  const [items, setItems] = useState<Pendencia[]>([]);
-  const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([]);
-  const [openNew, setOpenNew] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [openClientCombobox, setOpenClientCombobox] = useState(false);
-  
-  // Form State
-  const [newTitle, setNewTitle] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [newCategory, setNewCategory] = useState<CategoriaPendencia>("Desenvolvimento");
-  const [newPriority, setNewPriority] = useState("Média");
-  const [newDateStart, setNewDateStart] = useState("");
-  const [newDateEnd, setNewDateEnd] = useState("");
-  const [newTimeStart, setNewTimeStart] = useState("");
-  const [newTimeEnd, setNewTimeEnd] = useState("");
-  const [newAssignee, setNewAssignee] = useState("");
-  const [newClient, setNewClient] = useState("");
-  const [newObs, setNewObs] = useState("");
-  const [newFiles, setNewFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    fetchTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    addComment,
+    fetchTaskEvents,
+    uploadAttachment,
+    loading,
+  } = usePendencias();
+  const { fetchConfiguracoes } = useSuporte();
 
+  // ─── Data State ───
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([]);
+  const [usuarios, setUsuarios] = useState<{ id: string; nome: string }[]>([]);
+  const [modulos, setModulos] = useState<{ id?: string; nome: string }[]>([]);
+
+  // ─── UI State ───
+  const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
+    return (localStorage.getItem("venux_pendencias_view") as "list" | "kanban") || "list";
+  });
+  const [search, setSearch] = useState("");
+  const [filterTipo, setFilterTipo] = useState("todos");
+  const [filterStatus, setFilterStatus] = useState("todos");
+  const [filterPriority, setFilterPriority] = useState("todos");
+  const [filterResponsavel, setFilterResponsavel] = useState("todos");
+  const [filterCriador, setFilterCriador] = useState("todos");
+  const [showFilters, setShowFilters] = useState(false);
+
+  // ─── Modal/Drawer State ───
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [modalMode, setModalMode] = useState<"create" | "edit" | "view">("create");
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTaskEvents, setSelectedTaskEvents] = useState<TaskEvent[]>([]);
+
+  // ─── Action Modal State ───
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [actionModalTask, setActionModalTask] = useState<Task | null>(null);
+  const [actionModalType, setActionModalType] = useState<TaskActionType>(null);
+
+  // ─── Data Loading ───
   const loadData = async () => {
-    const [data, empRes] = await Promise.all([
-      fetchPendencias(),
-      supabase.from('empresas').select('id, nome').order('nome')
-    ]);
-    setItems(data);
-    if (empRes.data) setEmpresas(empRes.data);
+    const tasksData = await fetchTasks();
+    setTasks(tasksData);
+
+    const { data: emps } = await supabase.from("empresas").select("id, nome").order("nome");
+    if (emps) setEmpresas(emps);
+
+    const { data: users } = await supabase.from("usuarios").select("id, nome").order("nome");
+    if (users) setUsuarios(users);
+
+    const config = await fetchConfiguracoes();
+    if (config?.modulos) setModulos(config.modulos);
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setNewFiles(prev => [...prev, ...Array.from(e.target.files!)]);
-    }
-  };
+  useEffect(() => {
+    localStorage.setItem("venux_pendencias_view", viewMode);
+  }, [viewMode]);
 
-  const handleRemoveFile = (index: number) => {
-    setNewFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsUploading(true);
-    
-    try {
-      let urls: string[] = [];
-      if (newFiles.length > 0) {
-        urls = await uploadImagensChamado(newFiles);
+  // ─── Filtering ───
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((t) => {
+      // Text search across multiple fields
+      if (search) {
+        const q = search.toLowerCase();
+        const matchSearch =
+          t.titulo?.toLowerCase().includes(q) ||
+          t.codigo_identificador?.toLowerCase().includes(q) ||
+          t.descricao?.toLowerCase().includes(q) ||
+          t.cliente?.nome?.toLowerCase().includes(q) ||
+          t.responsavel_atual?.nome?.toLowerCase().includes(q) ||
+          t.criado_por?.nome?.toLowerCase().includes(q);
+        if (!matchSearch) return false;
       }
 
-      await createPendencia({
-        titulo: newTitle,
-        descricao: newDesc,
-        categoria: newCategory,
-        prioridade: newPriority,
-        status: "Pendente",
-        tags: [],
-        data_inicio: newDateStart || undefined,
-        data_fim: newDateEnd || undefined,
-        hora_inicio: newTimeStart || undefined,
-        hora_fim: newTimeEnd || undefined,
-        responsavel: newAssignee || undefined,
-        cliente_id: newClient && newClient !== "none" ? newClient : undefined,
-        observacao: newObs || undefined,
-        imagens: urls,
-        criado_por_nome: auth?.nome || auth?.email || 'Sistema'
+      // Tipo filter (Interna / Cliente)
+      if (filterTipo === "Cliente" && !t.cliente_id) return false;
+      if (filterTipo === "Interna" && t.cliente_id) return false;
+
+      // Status filter
+      if (filterStatus !== "todos" && t.status !== filterStatus) return false;
+
+      // Priority filter
+      if (filterPriority !== "todos" && t.prioridade !== filterPriority) return false;
+
+      // Responsável Dev filter
+      if (filterResponsavel !== "todos" && t.responsavel_atual_id !== filterResponsavel)
+        return false;
+
+      // Criador Suporte filter
+      if (filterCriador !== "todos" && t.criado_por_id !== filterCriador) return false;
+
+      return true;
+    });
+  }, [tasks, search, filterTipo, filterStatus, filterPriority, filterResponsavel, filterCriador]);
+
+  const hasActiveFilters =
+    filterTipo !== "todos" ||
+    filterStatus !== "todos" ||
+    filterPriority !== "todos" ||
+    filterResponsavel !== "todos" ||
+    filterCriador !== "todos";
+
+  const clearFilters = () => {
+    setFilterTipo("todos");
+    setFilterStatus("todos");
+    setFilterPriority("todos");
+    setFilterResponsavel("todos");
+    setFilterCriador("todos");
+    setSearch("");
+  };
+
+  // ─── Handlers ───
+  const handleTaskClick = async (task: Task) => {
+    setSelectedTask(task);
+    setModalMode("view");
+    setTaskToEdit(task);
+    setCreateModalOpen(true);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setModalMode("edit");
+    setTaskToEdit(task);
+    setCreateModalOpen(true);
+  };
+
+  const handleDeleteTask = (task: Task) => {
+    const isCreator = auth?.id === task.criado_por_id;
+    const isResponsible = auth?.id === task.responsavel_atual_id;
+    const isAdmin =
+      auth?.role === "admin" ||
+      auth?.role === "Administrador" ||
+      auth?.role === "Super Admin" ||
+      auth?.role === "super" ||
+      auth?.role?.toLowerCase().includes("super");
+
+    if (!isCreator && !isResponsible && !isAdmin) {
+      toast.error("Acesso Negado", {
+        description: "Apenas o criador ou o responsável atual podem excluir esta pendência.",
       });
-      
-      setOpenNew(false);
-      resetForm();
-      loadData();
-      toast.success("Pendência registrada com sucesso!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Erro ao criar pendência.");
-    } finally {
-      setIsUploading(false);
+      return;
+    }
+
+    setTaskToDelete(task);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!taskToDelete) return;
+
+    // Registra na trilha de auditoria
+    await logExclusaoAuditoria("suporte_tasks", taskToDelete.id, taskToDelete, "EXCLUSAO");
+
+    await deleteTask(taskToDelete.id);
+    toast.success("Pendência excluída com sucesso.");
+    setDeleteModalOpen(false);
+    setTaskToDelete(null);
+    loadData();
+  };
+
+  const handleActionSubmit = async (payload: {
+    status?: TaskStatus;
+    responsavel_atual_id?: string;
+    mensagem?: string;
+    anexos?: File[];
+    actionType?: string;
+  }) => {
+    if (!actionModalTask) return;
+
+    // Map action type to human-readable tipo_evento
+    const tipoEventoMap: Record<string, string> = {
+      registrar_acao: "Ação / Observação",
+      enviar_teste: "Envio para Testes",
+      enviar_atualizacao: "Envio de Atualização",
+      cancelar: "Cancelamento",
+      aprovar_atualizacao: "Aprovação",
+      reprovar_atualizacao: "Ajuste Solicitado",
+      finalizar_testes: "Finalização de Testes",
+    };
+    const tipoEvento = tipoEventoMap[payload.actionType || ""] || "Ação";
+
+    if (payload.status || payload.responsavel_atual_id) {
+      await updateTask(
+        actionModalTask.id,
+        {
+          ...(payload.status && { status: payload.status }),
+          ...(payload.responsavel_atual_id && {
+            responsavel_atual_id: payload.responsavel_atual_id,
+          }),
+        },
+        auth?.id,
+      );
+    }
+
+    let eventId = undefined;
+    if (payload.mensagem || (payload.anexos && payload.anexos.length > 0)) {
+      const msg = payload.mensagem || "Adicionou anexos/evidências.";
+      const event = await addComment(actionModalTask.id, auth?.id || undefined, msg, tipoEvento);
+      if (event) {
+        eventId = event.id;
+      }
+    }
+
+    if (payload.anexos && payload.anexos.length > 0) {
+      await Promise.all(
+        payload.anexos.map((file) => uploadAttachment(actionModalTask.id, file, eventId)),
+      );
+
+      // Envia notificação sobre o novo anexo
+      if (actionModalTask.responsavel_atual_id) {
+        supabase.channel("venux_notifications").send({
+          type: "broadcast",
+          event: "task_attachment_added",
+          payload: {
+            task_id: actionModalTask.id,
+            titulo: actionModalTask.titulo,
+            responsavel_atual_id: actionModalTask.responsavel_atual_id,
+            usuario_id: auth?.id,
+          },
+        });
+      }
+    }
+
+    toast.success("Ação registrada com sucesso!");
+    setActionModalOpen(false);
+    loadData();
+    if (selectedTask?.id === actionModalTask.id) {
+      const eventsData = await fetchTaskEvents(actionModalTask.id);
+      setSelectedTaskEvents(eventsData);
+      setSelectedTask((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...(payload.status && { status: payload.status }),
+              ...(payload.responsavel_atual_id && {
+                responsavel_atual_id: payload.responsavel_atual_id,
+              }),
+            }
+          : null,
+      );
     }
   };
 
-  const resetForm = () => {
-    setNewTitle("");
-    setNewDesc("");
-    setNewCategory("Desenvolvimento");
-    setNewPriority("Média");
-    setNewDateStart("");
-    setNewDateEnd("");
-    setNewTimeStart("");
-    setNewTimeEnd("");
-    setNewAssignee("");
-    setNewClient("");
-    setNewObs("");
-    setNewFiles([]);
-  };
+  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
 
-  const handleUpdateStatus = async (id: string, novoStatus: StatusPendencia) => {
-    try {
-      await updatePendencia(id, { status: novoStatus });
+    // Optimistic update
+    const now = new Date().toISOString();
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              status: newStatus,
+              ...(newStatus === "Concluída" ? { data_conclusao: now } : {}),
+            }
+          : t,
+      ),
+    );
+    if (selectedTask?.id === taskId) {
+      setSelectedTask((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: newStatus,
+              ...(newStatus === "Concluída" ? { data_conclusao: now } : {}),
+            }
+          : null,
+      );
+    }
+
+    const updatePayload: Partial<Task> = { status: newStatus };
+    if (newStatus === "Concluída") {
+      updatePayload.data_conclusao = now;
+    }
+
+    const result = await updateTask(taskId, updatePayload, auth?.id);
+    if (result) {
+      toast.success(`Pendência movida para "${newStatus}"`);
+      if (detailDrawerOpen && selectedTask?.id === taskId) {
+        const events = await fetchTaskEvents(taskId);
+        setSelectedTaskEvents(events);
+      }
+    } else {
+      toast.error("Erro ao atualizar o status.");
       loadData();
-    } catch (err) {
-      console.error(err);
     }
   };
 
-  const renderColumn = (status: StatusPendencia, title: string, icon: React.ReactNode) => {
-    const columnItems = items.filter(i => i.status === status);
+  const handleCreateTask = async (data: any) => {
+    // Format metadata into description for columns that DO NOT exist in the database schema
+    const metadados = [];
+    if (data.setor) metadados.push(`**Setor da Empresa:** ${data.setor}`);
+    if (data.filial) metadados.push(`**Filial:** ${data.filial}`);
+    if (data.numero_pedido) metadados.push(`**Nº Pedido:** ${data.numero_pedido}`);
+    if (data.lote) metadados.push(`**Lote:** ${data.lote}`);
+    if (data.nota) metadados.push(`**Nota:** ${data.nota}`);
+    if (data.chamado_origem_id) metadados.push(`**ID Chamado Origem:** ${data.chamado_origem_id}`);
 
-    return (
-      <div className="flex-1 min-w-[320px] flex flex-col bg-muted/30 rounded-xl p-4 border border-border/50">
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h3 className="font-semibold text-sm flex items-center gap-2">
-            {icon} {title}
-            <Badge variant="secondary" className="ml-2 text-xs">{columnItems.length}</Badge>
-          </h3>
-        </div>
+    let baseDescription = data.descricao || "";
+    // If we are editing, we might already have the '### Referências' block.
+    // We should strip the old one before appending the new one.
+    if (baseDescription.includes("### Referências")) {
+      baseDescription = baseDescription.split("### Referências")[0].trim();
+    }
 
-        <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1">
-          {columnItems.length === 0 ? (
-            <div className="text-center p-6 text-sm text-muted-foreground italic border-2 border-dashed rounded-lg">
-              Nenhum item nesta coluna
-            </div>
-          ) : (
-            columnItems.map(item => (
-              <div key={item.id} className="bg-card p-4 rounded-lg shadow-sm border group hover:border-primary/50 transition-colors">
-                <div className="flex items-start justify-between mb-2">
-                  <Badge variant="outline" className={`text-[10px] uppercase font-bold tracking-wider ${getCategoryColor(item.categoria)}`}>
-                    {item.categoria}
-                  </Badge>
-                  <span className="text-[10px] text-muted-foreground">
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                
-                <h4 className="font-semibold text-sm mb-1 leading-tight">{item.titulo}</h4>
-                {item.cliente?.nome && (
-                  <p className="text-[11px] font-medium text-slate-500 mb-2 truncate">
-                    Cliente: {item.cliente.nome}
-                  </p>
-                )}
-                
-                {item.descricao && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{item.descricao}</p>
-                )}
+    let descricaoFinal = baseDescription;
+    if (metadados.length > 0) {
+      descricaoFinal += (descricaoFinal ? "\n\n" : "") + "### Referências\n" + metadados.join("\n");
+    }
 
-                {(item.data_inicio || item.responsavel) && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {item.data_inicio && (
-                      <Badge variant="secondary" className="text-[10px] font-normal gap-1 bg-slate-100">
-                        <CalendarIcon className="w-3 h-3"/> {item.data_inicio.split('-').reverse().join('/')}
-                      </Badge>
-                    )}
-                    {item.responsavel && (
-                      <Badge variant="secondary" className="text-[10px] font-normal gap-1 bg-indigo-50 text-indigo-700">
-                        <Users className="w-3 h-3"/> {item.responsavel}
-                      </Badge>
-                    )}
-                  </div>
-                )}
+    const payload: any = {
+      titulo: data.titulo,
+      descricao: descricaoFinal,
+      categoria: data.categoria,
+      prioridade: data.prioridade,
+      responsavel_atual_id: data.responsavel_atual_id,
+      cliente_id: data.cliente_id,
+      modulo_id: data.modulo_id,
+      equipe_responsavel: data.equipe_responsavel,
+      data_inicio: data.data_inicio,
+      data_fim: data.data_fim,
+      responsaveis_ids: data.responsaveis_ids,
+      criado_por_id: auth?.id,
+    };
 
-                <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                  <span className={`text-[10px] font-medium ${
-                    item.prioridade === 'Alta' || item.prioridade === 'Urgente' ? 'text-red-500' : 'text-muted-foreground'
-                  }`}>
-                    Prioridade: {item.prioridade}
-                  </span>
-                  
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {status !== 'Pendente' && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateStatus(item.id, 'Pendente')} title="Mover para Pendente">
-                        <Clock className="w-3 h-3 text-muted-foreground" />
-                      </Button>
-                    )}
-                    {status !== 'Em Andamento' && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateStatus(item.id, 'Em Andamento')} title="Iniciar">
-                        <MoreHorizontal className="w-3 h-3 text-blue-500" />
-                      </Button>
-                    )}
-                    {status !== 'Concluído' && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateStatus(item.id, 'Concluído')} title="Concluir">
-                        <CheckCircle2 className="w-3 h-3 text-green-500" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
+    if (taskToEdit) {
+      const result = await updateTask(taskToEdit.id, payload, auth?.id);
+      if (result) {
+        if (data.anexos_novos && data.anexos_novos.length > 0) {
+          await Promise.all(
+            data.anexos_novos.map((file: File) => uploadAttachment(taskToEdit.id, file)),
+          );
+        }
+        toast.success("Pendência atualizada com sucesso!");
+        setCreateModalOpen(false);
+        setTaskToEdit(null);
+        await loadData();
+      } else {
+        toast.error("Erro ao atualizar a pendência.");
+      }
+    } else {
+      payload.status = "Aberta" as TaskStatus;
+      const result = await createTask(payload);
+      if (result) {
+        if (data.anexos_novos && data.anexos_novos.length > 0) {
+          await Promise.all(
+            data.anexos_novos.map((file: File) => uploadAttachment(result.id, file)),
+          );
+        }
+        toast.success("Pendência criada com sucesso!");
+        setCreateModalOpen(false);
+        await loadData();
+      } else {
+        toast.error("Erro ao criar a pendência.");
+      }
+    }
+  };
+
+  const handleAddComment = async (taskId: string, message: string) => {
+    if (!auth?.id) return;
+    const result = await addComment(taskId, auth.id, message);
+    if (result) {
+      toast.success("Comentário adicionado.");
+      const events = await fetchTaskEvents(taskId);
+      setSelectedTaskEvents(events);
+    } else {
+      toast.error("Erro ao adicionar comentário.");
+    }
+  };
+
+  const handleDrawerRefresh = async () => {
+    if (!selectedTask) return;
+    const tasksData = await fetchTasks();
+    setTasks(tasksData);
+    const updated = tasksData.find((t) => t.id === selectedTask.id);
+    if (updated) setSelectedTask(updated);
+    const events = await fetchTaskEvents(selectedTask.id);
+    setSelectedTaskEvents(events);
+  };
+
+  // ─── Render ───
+  return (
+    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+      {/* ══════════ HEADER ══════════ */}
+      <div className="relative overflow-hidden border-b px-6 py-5 bg-card shrink-0">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col gap-4">
+          {/* Title + Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <ClipboardList className="w-5 h-5 text-primary" />
               </div>
-            ))
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Pendências & Tasks</h1>
+                <p className="text-sm text-muted-foreground">
+                  Gerencie demandas entre Suporte e Desenvolvimento
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => {
+                  setModalMode("create");
+                  setTaskToEdit(null);
+                  setCreateModalOpen(true);
+                }}
+                className="gap-2 shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Nova Pendência
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => loadData()}
+                title="Recarregar dados"
+                className="shrink-0"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <PendenciasStatsBar tasks={tasks} />
+
+          {/* Search + View Toggle + Filters */}
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            {/* Search */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar por ID, título, cliente, responsável..."
+                className="pl-9 bg-background"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            {/* View Toggle Tabs */}
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "kanban")}>
+              <TabsList className="h-9">
+                <TabsTrigger value="list" className="gap-1.5 px-3">
+                  <List className="w-4 h-4" />
+                  <span className="hidden sm:inline">Lista</span>
+                </TabsTrigger>
+                <TabsTrigger value="kanban" className="gap-1.5 px-3">
+                  <KanbanSquare className="w-4 h-4" />
+                  <span className="hidden sm:inline">Kanban</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* Filter Toggle */}
+            <Button
+              variant={showFilters ? "secondary" : "outline"}
+              size="sm"
+              className="gap-1.5 h-9"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filtros
+              {hasActiveFilters && (
+                <Badge variant="destructive" className="ml-1 h-4 px-1.5 text-[10px]">
+                  Ativo
+                </Badge>
+              )}
+            </Button>
+
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 h-9 text-muted-foreground hover:text-destructive"
+                onClick={clearFilters}
+              >
+                <X className="w-3.5 h-3.5" />
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+
+          {/* Advanced Filters (collapsible) */}
+          {showFilters && (
+            <div className="flex flex-wrap items-center gap-2 pt-1 animate-in slide-in-from-top-2 duration-200">
+              <Select value={filterTipo} onValueChange={setFilterTipo}>
+                <SelectTrigger className="w-[140px] h-9 bg-background">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Tipos</SelectItem>
+                  <SelectItem value="Interna">Interna</SelectItem>
+                  <SelectItem value="Cliente">Cliente</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[180px] h-9 bg-background">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Status</SelectItem>
+                  <SelectItem value="Aberta">Aberta</SelectItem>
+                  <SelectItem value="Em Análise">Em Análise</SelectItem>
+                  <SelectItem value="Em Desenvolvimento">Em Desenvolvimento</SelectItem>
+                  <SelectItem value="Aguardando Validação">Aguardando Validação</SelectItem>
+                  <SelectItem value="Ajuste Solicitado">Ajuste Solicitado</SelectItem>
+                  <SelectItem value="Concluída">Concluída</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterPriority} onValueChange={setFilterPriority}>
+                <SelectTrigger className="w-[150px] h-9 bg-background">
+                  <SelectValue placeholder="Prioridade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas Prioridades</SelectItem>
+                  <SelectItem value="Baixa">Baixa</SelectItem>
+                  <SelectItem value="Média">Média</SelectItem>
+                  <SelectItem value="Alta">Alta</SelectItem>
+                  <SelectItem value="Urgente">Urgente / Crítica</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterResponsavel} onValueChange={setFilterResponsavel}>
+                <SelectTrigger className="w-[180px] h-9 bg-background">
+                  <SelectValue placeholder="Responsável Dev" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos Responsáveis</SelectItem>
+                  {usuarios.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterCriador} onValueChange={setFilterCriador}>
+                <SelectTrigger className="w-[180px] h-9 bg-background">
+                  <SelectValue placeholder="Criador Suporte" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos Criadores</SelectItem>
+                  {usuarios.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
         </div>
       </div>
-    );
-  };
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
-      <div className="flex items-center justify-between p-6 pb-4 border-b">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Lightbulb className="w-6 h-6 text-yellow-500" />
-            Pendências e Ideias
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Backlog centralizado para ideias de produtos, tarefas de desenvolvimento e pautas de reuniões.
-          </p>
-        </div>
-        
-        <Dialog open={openNew} onOpenChange={(val) => { setOpenNew(val); if(!val) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
-              <Plus className="w-4 h-4" /> Nova Pendência
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl">Registrar Item no Backlog / Tarefa</DialogTitle>
-            </DialogHeader>
-            <form 
-              onSubmit={handleCreate} 
-              className="space-y-6 mt-4"
-              onPaste={(e) => {
-                if (e.clipboardData.files && e.clipboardData.files.length > 0) {
-                  const pastedFiles = Array.from(e.clipboardData.files);
-                  setNewFiles(prev => [...prev, ...pastedFiles]);
-                  toast.success(`${pastedFiles.length} arquivo(s) colado(s) com sucesso!`);
+      {/* ══════════ MAIN CONTENT ══════════ */}
+      <div className="flex-1 overflow-hidden">
+        {viewMode === "list" ? (
+          <div className="p-6 h-full overflow-y-auto">
+            <PendenciasList
+              tasks={filteredTasks}
+              modulos={modulos}
+              onTaskClick={handleTaskClick}
+              onStatusChange={handleStatusChange}
+              onActionClick={(task, type) => {
+                if (type === "finalizar_direto") {
+                  handleStatusChange(task.id, "Concluída");
+                  return;
                 }
+                setActionModalTask(task);
+                setActionModalType(type);
+                setActionModalOpen(true);
               }}
-            >
-              
-              {/* 1. Identificação */}
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-4">
-                <h3 className="font-semibold text-sm text-slate-800 border-b pb-2">1. Identificação da Tarefa</h3>
-                <div className="space-y-2">
-                  <Label>Título / Assunto (Obrigatório)</Label>
-                  <Input required value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Ex: Desenvolver tela de dashboard financeiro" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Categoria</Label>
-                    <Select value={newCategory} onValueChange={(v: any) => setNewCategory(v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Desenvolvimento">Desenvolvimento</SelectItem>
-                        <SelectItem value="Ideia">Ideia / Melhoria</SelectItem>
-                        <SelectItem value="Reunião">Pauta de Reunião</SelectItem>
-                        <SelectItem value="Pedido">Pedido Especial</SelectItem>
-                        <SelectItem value="Outros">Outros</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Prioridade</Label>
-                    <Select value={newPriority} onValueChange={setNewPriority}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Baixa">Baixa</SelectItem>
-                        <SelectItem value="Média">Média</SelectItem>
-                        <SelectItem value="Alta">Alta</SelectItem>
-                        <SelectItem value="Urgente">Urgente</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Descrição da Tarefa</Label>
-                  <Textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Descreva os detalhes da tarefa, requisitos ou contexto..." className="min-h-[80px]" />
-                </div>
-              </div>
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              loading={loading}
+            />
+          </div>
+        ) : (
+          <PendenciasKanban
+            tasks={filteredTasks}
+            modulos={modulos}
+            onTaskClick={handleTaskClick}
+            onStatusChange={handleStatusChange}
+            loading={loading}
+          />
+        )}
+      </div>
 
-              {/* 2. Prazos e Responsáveis */}
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-4">
-                <h3 className="font-semibold text-sm text-slate-800 border-b pb-2">2. Prazos e Responsáveis</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label>Data de Início</Label>
-                    <Input type="date" value={newDateStart} onChange={e => setNewDateStart(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Hora de Início</Label>
-                    <Input type="time" value={newTimeStart} onChange={e => setNewTimeStart(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Data Final / Prazo</Label>
-                    <Input type="date" value={newDateEnd} onChange={e => setNewDateEnd(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Hora Final</Label>
-                    <Input type="time" value={newTimeEnd} onChange={e => setNewTimeEnd(e.target.value)} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Responsável pela Tarefa</Label>
-                    <Input value={newAssignee} onChange={e => setNewAssignee(e.target.value)} placeholder="Ex: João Silva" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Quem está lançando</Label>
-                    <Input disabled value={auth?.nome || auth?.email || 'Sistema'} className="bg-muted text-slate-600" />
-                  </div>
-                </div>
-              </div>
+      {/* ══════════ MODALS & DRAWERS ══════════ */}
+      <PendenciaCreateModal
+        open={createModalOpen}
+        onOpenChange={(open) => {
+          setCreateModalOpen(open);
+          if (!open) setTaskToEdit(null);
+        }}
+        onSubmit={handleCreateTask}
+        empresas={empresas}
+        usuarios={usuarios}
+        modulos={modulos}
+        loading={loading}
+        taskToEdit={taskToEdit}
+        readOnly={modalMode === "view"}
+        onActionClick={(task, type) => {
+          if (type === "finalizar_direto") {
+            handleStatusChange(task.id, "Concluída");
+            return;
+          }
+          setActionModalTask(task);
+          setActionModalType(type);
+          setActionModalOpen(true);
+        }}
+        onAddComment={handleAddComment}
+        currentUserId={auth?.id}
+        currentUserRole={auth?.role}
+      />
 
-              {/* 3. Relacionamento e Anexos */}
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-4">
-                <h3 className="font-semibold text-sm text-slate-800 border-b pb-2">3. Cliente, Observações e Evidências</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2 flex flex-col mt-1">
-                    <Label>Cliente que Pediu (Opcional)</Label>
-                    <Popover open={openClientCombobox} onOpenChange={setOpenClientCombobox}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={openClientCombobox}
-                          className="w-full justify-between font-normal px-3"
-                        >
-                          {newClient && newClient !== "none"
-                            ? empresas.find((emp) => emp.id === newClient)?.nome
-                            : "Nenhum Cliente (Interno)"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Buscar cliente..." />
-                          <CommandList>
-                            <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                            <CommandGroup>
-                              <CommandItem
-                                value="nenhum"
-                                onSelect={() => {
-                                  setNewClient("");
-                                  setOpenClientCombobox(false);
-                                }}
-                              >
-                                <CheckCircle2
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    !newClient || newClient === "none" ? "opacity-100 text-primary" : "opacity-0"
-                                  )}
-                                />
-                                Nenhum Cliente (Interno)
-                              </CommandItem>
-                              {empresas.map((emp) => (
-                                <CommandItem
-                                  key={emp.id}
-                                  value={emp.nome}
-                                  onSelect={() => {
-                                    setNewClient(emp.id);
-                                    setOpenClientCombobox(false);
-                                  }}
-                                >
-                                  <CheckCircle2
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      newClient === emp.id ? "opacity-100 text-primary" : "opacity-0"
-                                    )}
-                                  />
-                                  {emp.nome}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Observação Interna</Label>
-                    <Input value={newObs} onChange={e => setNewObs(e.target.value)} placeholder="Algo a observar..." />
-                  </div>
-                </div>
-                
-                <div className="space-y-2 pt-2">
-                  <Label>Anexar Imagens ou Arquivos (Opcional) <span className="text-muted-foreground font-normal ml-1">(Ctrl+V para colar)</span></Label>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-4">
-                      <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="shrink-0 bg-white hover:bg-slate-50">
-                        <Upload className="w-4 h-4 mr-2" /> Escolher Arquivos
-                      </Button>
-                      <input 
-                        type="file" 
-                        multiple 
-                        className="hidden" 
-                        ref={fileInputRef}
-                        onChange={(e) => {
-                          if (e.target.files) {
-                            const files = Array.from(e.target.files);
-                            setNewFiles(prev => [...prev, ...files]);
-                            e.target.value = '';
-                          }
-                        }}
-                        accept="image/*,.pdf,.doc,.docx"
-                      />
-                      <div className="text-xs text-muted-foreground">
-                        Você pode colar imagens com Ctrl+V.
-                      </div>
+      <PendenciaDetailDrawer
+        task={selectedTask}
+        open={detailDrawerOpen}
+        onOpenChange={(open) => {
+          setDetailDrawerOpen(open);
+          if (!open) {
+            setSelectedTask(null);
+            setSelectedTaskEvents([]);
+          }
+        }}
+        events={selectedTaskEvents}
+        onStatusChange={handleStatusChange}
+        onActionClick={(task, type) => {
+          if (type === "finalizar_direto") {
+            handleStatusChange(task.id, "Concluída");
+            return;
+          }
+          setActionModalTask(task);
+          setActionModalType(type);
+          setActionModalOpen(true);
+        }}
+        onAddComment={handleAddComment}
+        onRefresh={handleDrawerRefresh}
+        currentUserId={auth?.id}
+        currentUserName={auth?.nome}
+        currentUserRole={auth?.role}
+      />
+
+      <TaskActionModal
+        task={actionModalTask}
+        actionType={actionModalType}
+        isOpen={actionModalOpen}
+        onClose={() => setActionModalOpen(false)}
+        usuarios={usuarios}
+        onSubmit={handleActionSubmit}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Excluir Pendência
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-left" asChild>
+              <div>
+                {taskToDelete?.status === "Concluída" ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md text-amber-600 dark:text-amber-500 font-medium flex items-start gap-2">
+                      <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                      <p className="text-sm">
+                        <strong>ATENÇÃO:</strong> Esta pendência já está <strong>CONCLUÍDA</strong>!
+                      </p>
                     </div>
-                    
-                    {newFiles.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2 p-2 border rounded-md bg-white">
-                        {newFiles.map((file, index) => {
-                          const isImage = file.type.startsWith('image/');
-                          return (
-                            <div key={index} className="relative group w-24 h-24 border rounded-md overflow-hidden bg-slate-50 shadow-sm flex items-center justify-center">
-                              {isImage ? (
-                                <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="flex flex-col items-center justify-center text-slate-500 p-2 text-center">
-                                  <FileText className="w-6 h-6 mb-1" />
-                                  <span className="text-[10px] uppercase font-bold text-slate-400 truncate w-full">{file.name}</span>
-                                </div>
-                              )}
-                              <button 
-                                type="button"
-                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                onClick={() => handleRemoveFile(index)}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    <p className="text-foreground">
+                      Tem certeza que deseja excluí-la? A exclusão de um item concluído apagará seu
+                      histórico de forma permanente.
+                    </p>
+                    <p className="text-muted-foreground italic text-sm">
+                      Pendência: "{taskToDelete?.titulo}"
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-foreground">
+                      Tem certeza que deseja excluir a pendência{" "}
+                      <strong>"{taskToDelete?.titulo}"</strong>?
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      Esta ação não pode ser desfeita.
+                    </p>
+                  </div>
+                )}
               </div>
-              
-              <DialogFooter className="pt-4 border-t">
-                <Button type="button" variant="ghost" onClick={() => setOpenNew(false)} disabled={isUploading}>Cancelar</Button>
-                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 w-40 text-white" disabled={isUploading}>
-                  {isUploading ? "Salvando..." : "Salvar Pendência"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="flex-1 overflow-x-auto p-6 bg-slate-50/50">
-        <div className="flex gap-6 h-full items-stretch">
-          {renderColumn("Pendente", "Caixa de Entrada / Backlog", <Clock className="w-4 h-4 text-slate-500" />)}
-          {renderColumn("Em Andamento", "Em Execução / Na Sprint", <MoreHorizontal className="w-4 h-4 text-blue-500" />)}
-          {renderColumn("Concluído", "Feito / Concluído", <CheckCircle2 className="w-4 h-4 text-green-500" />)}
-        </div>
-      </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={loading}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

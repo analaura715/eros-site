@@ -127,6 +127,11 @@ export function usePendencias() {
         }
 
         delete updates.ciclos_retrabalho;
+        delete (updates as any).data_conclusao;
+        if (updates.responsavel_atual_id === '') updates.responsavel_atual_id = null;
+        if (updates.cliente_id === '') updates.cliente_id = null;
+        if (updates.modulo_id === '') updates.modulo_id = null;
+        if (updates.equipe_responsavel === '') updates.equipe_responsavel = null;
         delete (updates as any).data_conclusao; // Remove para evitar erro 400, pois a coluna não existe no banco
 
         const { data, error } = await supabase
@@ -181,9 +186,9 @@ export function usePendencias() {
 
         return data as Task;
       } catch (error: any) {
-        console.error("Erro ao atualizar task:", error);
+        console.error("Erro ao atualizar task:", JSON.stringify(error, null, 2), error);
         toast.error(
-          `Falha ao atualizar pendência: ${error?.message || error?.details || "Erro 400 - Verifique os dados"}`,
+          `Falha ao atualizar pendência: ${error?.message || error?.details || JSON.stringify(error) || "Erro 400"}`,
         );
         return null;
       } finally {
@@ -211,7 +216,7 @@ export function usePendencias() {
   const addComment = useCallback(
     async (
       taskId: string,
-      userId: string,
+      userId: string | undefined,
       message: string,
       tipoEvento: string = "Comentário",
     ): Promise<TaskEvent | null> => {
